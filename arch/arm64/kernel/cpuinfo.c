@@ -287,25 +287,6 @@ static int cpuid_cpu_offline(unsigned int cpu)
 	return 0;
 }
 
-static int cpuid_callback(struct notifier_block *nb,
-			 unsigned long action, void *hcpu)
-{
-	int rc = 0;
-	unsigned long cpu = (unsigned long)hcpu;
-
-	switch (action & ~CPU_TASKS_FROZEN) {
-	case CPU_ONLINE:
-	case CPU_DOWN_FAILED:
-		rc = cpuid_add_regs(cpu);
-		break;
-	case CPU_DOWN_PREPARE:
-		rc = cpuid_remove_regs(cpu);
-		break;
-	}
-
-	return notifier_from_errno(rc);
-}
-
 static int __init cpuinfo_regs_init(void)
 {
 	int cpu, ret;
