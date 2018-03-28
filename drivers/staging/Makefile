@@ -43,4 +43,4 @@ obj-$(CONFIG_KS7010)		+= ks7010/
 obj-$(CONFIG_GREYBUS)		+= greybus/
 obj-$(CONFIG_BCM2708_VCHIQ)	+= vc04_services/
 obj-$(CONFIG_VNSWAP)		+= vnswap/
->>>>>>> 7f043e4a6091 (vnswap: import from starlte)
+obj-$(CONFIG_QCA_CLD_WLAN)	+= qcacld-3.0/
