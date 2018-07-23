@@ -7288,10 +7288,10 @@ retry:
 			}
 
 			/*
-			 * Favor CPUs with smaller capacity for Non latency
-			 * sensitive tasks.
+			 * Skip processing placement further if we are visiting
+			 * cpus with lower capacity than start cpu
 			 */
-			if (capacity_orig > target_capacity)
+			if (capacity_orig < capacity_orig_of(cpu))
 				continue;
 
 			/*
