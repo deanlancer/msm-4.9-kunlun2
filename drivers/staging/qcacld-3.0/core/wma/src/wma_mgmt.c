@@ -287,6 +287,7 @@ int wma_beacon_swba_handler(void *handle, uint8_t *event, uint32_t len)
 		break;
 	}
 	return 0;
+
 }
 
 #ifdef FEATURE_WLAN_DIAG_SUPPORT
@@ -3182,8 +3183,11 @@ static int wma_process_mgmt_tx_completion(tp_wma_handle wma_handle,
 		return -EINVAL;
 	}
 
+#ifdef WLAN_DEBUG
 	wma_debug("status: %s wmi_desc_id: %d",
 		  wma_get_status_str(status), desc_id);
+#endif
+
 
 	pdev = wma_handle->pdev;
 	if (pdev == NULL) {

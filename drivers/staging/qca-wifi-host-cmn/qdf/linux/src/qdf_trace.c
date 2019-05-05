@@ -1494,6 +1494,7 @@ uint8_t qdf_get_rate_limit_by_type(uint8_t type)
  *
  * Return: String based on pkt type
  */
+/**
 static
 uint8_t *qdf_get_pkt_type_string(uint8_t type, uint8_t subtype)
 {
@@ -1545,31 +1546,31 @@ uint8_t *qdf_get_pkt_type_string(uint8_t type, uint8_t subtype)
 		}
 	}
 }
-
+*/
 /**
  * qdf_get_pkt_status_string() - Get the string based on pkt status
  * @status: packet status
  *
  * Return: String based on pkt status
  */
-static
-uint8_t *qdf_get_pkt_status_string(uint8_t status)
-{
-	switch (status) {
-	case QDF_TX_RX_STATUS_INVALID:
-		return "inv";
-	case QDF_TX_RX_STATUS_OK:
-		return "succ";
-	case QDF_TX_RX_STATUS_FW_DISCARD:
-		return "disc";
-	case QDF_TX_RX_STATUS_NO_ACK:
-		return "nack";
-	case QDF_TX_RX_STATUS_DROP:
-		return "drop";
-	default:
-		return "unknown";
-	}
-}
+// static
+// uint8_t *qdf_get_pkt_status_string(uint8_t status)
+// {
+// 	switch (status) {
+// 	case QDF_TX_RX_STATUS_INVALID:
+// 		return "inv";
+// 	case QDF_TX_RX_STATUS_OK:
+// 		return "succ";
+// 	case QDF_TX_RX_STATUS_FW_DISCARD:
+// 		return "disc";
+// 	case QDF_TX_RX_STATUS_NO_ACK:
+// 		return "nack";
+// 	case QDF_TX_RX_STATUS_DROP:
+// 		return "drop";
+// 	default:
+// 		return "unknown";
+// 	}
+// }
 
 /**
  * qdf_dp_log_proto_pkt_info() - Send diag log with pkt info
@@ -2079,7 +2080,7 @@ void qdf_dp_display_proto_pkt_always(struct qdf_dp_trace_record_s *record,
 {
 	int loc;
 	char prepend_str[QDF_DP_TRACE_PREPEND_STR_SIZE];
-	struct qdf_dp_trace_proto_buf *buf =
+	struct qdf_dp_trace_proto_buf *buf __maybe_unused =
 		(struct qdf_dp_trace_proto_buf *)record->data;
 
 	qdf_mem_zero(prepend_str, sizeof(prepend_str));
