@@ -1,3 +1,4 @@
+#include <linux/binfmts.h>
 #include <linux/cgroup.h>
 #include <linux/err.h>
 #include <linux/percpu.h>
@@ -989,7 +990,7 @@ boost_slots_release(struct schedtune *st)
 static int sched_boost_override_write_wrapper(struct cgroup_subsys_state *css,
 					      struct cftype *cft, u64 override)
 {
-	if (!strcmp(current->comm, "init"))
+	if (task_is_booster(current))
 		return 0;
 
 	return sched_boost_override_write(css, cft, override);
@@ -998,7 +999,7 @@ static int sched_boost_override_write_wrapper(struct cgroup_subsys_state *css,
 static int sched_colocate_write_wrapper(struct cgroup_subsys_state *css,
 					struct cftype *cft, u64 colocate)
 {
-	if (!strcmp(current->comm, "init"))
+	if (task_is_booster(current))
 		return 0;
 
 	return sched_colocate_write(css, cft, colocate);
@@ -1008,7 +1009,7 @@ static int sched_colocate_write_wrapper(struct cgroup_subsys_state *css,
 static int boost_write_wrapper(struct cgroup_subsys_state *css,
 			       struct cftype *cft, s64 boost)
 {
-	if (!strcmp(current->comm, "init"))
+	if (task_is_booster(current))
 		return 0;
 
 	return boost_write(css, cft, boost);
@@ -1017,7 +1018,7 @@ static int boost_write_wrapper(struct cgroup_subsys_state *css,
 static int prefer_idle_write_wrapper(struct cgroup_subsys_state *css,
 				     struct cftype *cft, u64 prefer_idle)
 {
-	if (!strcmp(current->comm, "init"))
+	if (task_is_booster(current))
 		return 0;
 
 	return prefer_idle_write(css, cft, prefer_idle);
