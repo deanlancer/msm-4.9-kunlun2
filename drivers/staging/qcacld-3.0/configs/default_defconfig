@@ -644,3 +644,5 @@ endif
 
 #Enable optimize size
 CONFIG_ENABLE_SIZE_OPTIMIZE := y
+
+CONFIG_WLAN_HANG_EVENT := n
