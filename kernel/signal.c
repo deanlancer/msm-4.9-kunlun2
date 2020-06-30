@@ -2221,9 +2221,6 @@ int get_signal(struct ksignal *ksig)
 	struct signal_struct *signal = current->signal;
 	int signr;
 
-	if (unlikely(current->task_works))
-		task_work_run();
-
 	if (unlikely(uprobe_deny_signal()))
 		return 0;
 
@@ -2236,6 +2233,13 @@ int get_signal(struct ksignal *ksig)
 
 relock:
 	spin_lock_irq(&sighand->siglock);
+	current->jobctl &= ~JOBCTL_TASK_WORK;
+	if (unlikely(current->task_works)) {
+		spin_unlock_irq(&sighand->siglock);
+		task_work_run();
+		goto relock;
+	}
+
 	/*
 	 * Every stopped thread goes here after wakeup. Check to see if
 	 * we should notify the parent, prepare_signal(SIGCONT) encodes
