@@ -543,6 +543,32 @@ int nfc_ioctl_power_states(struct file *filp, unsigned long arg)
 		usleep_range(10000, 10100);
 		gpio_set_value(nqx_dev->en_gpio, 1);
 		usleep_range(10000, 10100);
+	} else if (arg == 4) {
+		/*
+		 * Setting firmware download gpio to HIGH for SN100U
+		 * before FW download start
+		 */
+		dev_dbg(&nqx_dev->client->dev, "SN100 fw gpio HIGH\n");
+		if (gpio_is_valid(nqx_dev->firm_gpio)) {
+			gpio_set_value(nqx_dev->firm_gpio, 1);
+			usleep_range(10000, 10100);
+		} else {
+			dev_err(&nqx_dev->client->dev,
+				"firm_gpio is invalid\n");
+		}
+	} else if (arg == 6) {
+		/*
+		 * Setting firmware download gpio to LOW for SN100U
+		 * FW download finished
+		 */
+		dev_dbg(&nqx_dev->client->dev, "SN100 fw gpio LOW\n");
+		if (gpio_is_valid(nqx_dev->firm_gpio)) {
+			gpio_set_value(nqx_dev->firm_gpio, 0);
+			usleep_range(10000, 10100);
+		} else {
+			dev_err(&nqx_dev->client->dev,
+				"firm_gpio is invalid\n");
+		}
 	} else {
 		r = -ENOIOCTLCMD;
 	}
@@ -1211,7 +1237,7 @@ err_clkreq_gpio:
 	gpio_free(platform_data->clkreq_gpio);
 err_ese_gpio:
 	/* optional gpio, not sure was configured in probe */
-	if (nqx_dev->ese_gpio > 0)
+	if (gpio_is_valid(platform_data->ese_gpio))
 		gpio_free(platform_data->ese_gpio);
 err_firm_gpio:
 	gpio_free(platform_data->firm_gpio);

@@ -147,6 +147,7 @@
 			"csiphy3_clk",
 			"csi3phytimer_clk_src",
 			"csi3phytimer_clk";
+		src-clock-name = "csi3phytimer_clk_src";
 		clock-cntl-level = "turbo";
 		clock-rates =
 			<0 0 0 0 384000000 0 269333333 0>;

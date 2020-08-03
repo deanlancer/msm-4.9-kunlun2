@@ -483,8 +483,10 @@ static int fifo_read(struct edge_info *einfo, void *_data, int len)
 	uint32_t fifo_size = einfo->rx_fifo_size;
 	uint32_t n;
 
-	if (read_index >= fifo_size || write_index >= fifo_size)
-		return 0;
+	if (read_index >= fifo_size || write_index >= fifo_size) {
+		WARN_ON_ONCE(1);
+		return -EINVAL;
+	}
 	while (len) {
 		ptr = einfo->rx_fifo + read_index;
 		if (read_index <= write_index)
@@ -531,8 +533,10 @@ static int fifo_write_body(struct edge_info *einfo, const void *_data,
 	uint32_t fifo_size = einfo->tx_fifo_size;
 	uint32_t n;
 
-	if (read_index >= fifo_size || *write_index >= fifo_size)
-		return 0;
+	if (read_index >= fifo_size || *write_index >= fifo_size) {
+		WARN_ON_ONCE(1);
+		return -EINVAL;
+	}
 	while (len) {
 		ptr = einfo->tx_fifo + *write_index;
 		if (*write_index < read_index) {
@@ -944,6 +948,7 @@ static void __rx_worker(struct edge_info *einfo, bool atomic_ctx)
 	char trash[FIFO_ALIGNMENT];
 	struct deferred_cmd *d_cmd;
 	void *cmd_data;
+	bool ret = false;
 
 	rcu_id = srcu_read_lock(&einfo->use_ref);
 
@@ -952,11 +957,18 @@ static void __rx_worker(struct edge_info *einfo, bool atomic_ctx)
 		return;
 	}
 
+	spin_lock_irqsave(&einfo->rx_lock, flags);
 	if (!einfo->rx_fifo) {
-		if (!get_rx_fifo(einfo))
+		ret = get_rx_fifo(einfo);
+		if (!ret) {
+			spin_unlock_irqrestore(&einfo->rx_lock, flags);
+			srcu_read_unlock(&einfo->use_ref, rcu_id);
 			return;
-		einfo->xprt_if.glink_core_if_ptr->link_up(&einfo->xprt_if);
+		}
 	}
+	spin_unlock_irqrestore(&einfo->rx_lock, flags);
+	if (ret)
+		einfo->xprt_if.glink_core_if_ptr->link_up(&einfo->xprt_if);
 
 	if ((atomic_ctx) && ((einfo->tx_resume_needed)
 	    || (einfo->tx_blocked_signal_sent)
@@ -1564,14 +1576,22 @@ static void tx_cmd_ch_remote_close_ack(struct glink_transport_if *if_ptr,
 static void subsys_up(struct glink_transport_if *if_ptr)
 {
 	struct edge_info *einfo;
+	unsigned long flags;
+	bool ret = false;
 
 	einfo = container_of(if_ptr, struct edge_info, xprt_if);
 	einfo->in_ssr = false;
+	spin_lock_irqsave(&einfo->rx_lock, flags);
 	if (!einfo->rx_fifo) {
-		if (!get_rx_fifo(einfo))
+		ret = get_rx_fifo(einfo);
+		if (!ret) {
+			spin_unlock_irqrestore(&einfo->rx_lock, flags);
 			return;
-		einfo->xprt_if.glink_core_if_ptr->link_up(&einfo->xprt_if);
+		}
 	}
+	spin_unlock_irqrestore(&einfo->rx_lock, flags);
+	if (ret)
+		einfo->xprt_if.glink_core_if_ptr->link_up(&einfo->xprt_if);
 }
 
 /**
