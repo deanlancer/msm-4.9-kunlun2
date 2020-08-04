@@ -14,6 +14,7 @@
 #include "sdm670-wsa881x.dtsi"
 #include "sdm670-lpi.dtsi"
 #include <dt-bindings/clock/qcom,audio-ext-clk.h>
+#include <generated/autoconf.h>
 
 &tavil_snd {
 	qcom,msm-mi2s-master = <1>, <1>, <1>, <1>, <1>;
@@ -140,6 +141,9 @@
 	qcom,msm-mbhc-hphl-swh = <1>;
 	qcom,msm-mbhc-gnd-swh = <1>;
 	qcom,msm-micbias2-ext-cap;
+#if defined(CONFIG_PRODUCT_KUNLUN2)
+        qcom,msm-micbias1-ext-cap;
+#endif
 	qcom,msm-hs-micbias-type = "external";
 	qcom,cdc-pdm-gpios = <&cdc_pdm_gpios>;
 	qcom,cdc-comp-gpios = <&cdc_comp_gpios>;
@@ -151,15 +155,78 @@
 	asoc-codec-names = "msm-stub-codec.1", "msm-dig-codec",
 			   "analog-codec", "msm_sdw_codec",
 			   "msm-ext-disp-audio-codec-rx";
-
-	qcom,wsa-max-devs = <2>;
+	qcom,wsa-disable;
+	qcom,wsa-max-devs = <0>;
 	qcom,wsa-devs = <&wsa881x_211_en>, <&wsa881x_212_en>,
 			<&wsa881x_213_en>, <&wsa881x_214_en>;
 	qcom,wsa-aux-dev-prefix = "SpkrLeft", "SpkrRight",
 				  "SpkrLeft", "SpkrRight";
 };
+/*Kunlun2++++*/
+&tlmm {
+                  pri_mi2s {
+			pri_mi2s_sleep: pri_mi2s_sleep {
+				mux {
+				pins = "gpio65","gpio67","gpio68";
+				function = "pri_mi2s";
+				};
+
+				config {
+				pins = "gpio65","gpio67","gpio68";
+				drive-strength = <2>; /* 2 mA */
+				};
+			};
+
+			pri_mi2s_active: pri_mi2s_active {
+			 mux {
+				 pins = "gpio65","gpio67","gpio68";
+				 function = "pri_mi2s";
+			 };
+			 config {
+				 pins = "gpio65","gpio67","gpio68";
+				 drive-strength = <2>; /* 8 mA */
+			 };
+		 };
+		};
+
+		pri_mi2s_ws {
+			pri_mi2s_ws_sleep: pri_mi2s_ws_sleep {
+			   mux {
+				   pins = "gpio66";
+				   function = "pri_mi2s_ws";
+			   };
+
+			   config {
+				   pins = "gpio66";
+				   drive-strength = <2>; /* 2 mA */
+			   };
+		   };
+
+			pri_mi2s_ws_active: pri_mi2s_ws_active {
+			    mux {
+				    pins = "gpio66";
+				    function = "pri_mi2s_ws";
+			    };
+			    config {
+				    pins = "gpio66";
+				    drive-strength = <2>; /* 8 mA */
+			    };
+		    };
+		};
+
+};
+/*Kunlun2---*/
 
 &soc {
+	/*Kunlun2+++*/
+	pri_mi2s_gpios: pri_mi2s_pinctrl {
+               status = "ok";
+               compatible = "qcom,msm-cdc-pinctrl";
+               pinctrl-names = "aud_active", "aud_sleep";
+               pinctrl-0 = <&pri_mi2s_active &pri_mi2s_ws_active>;
+               pinctrl-1 = <&pri_mi2s_sleep &pri_mi2s_ws_sleep>;
+	};
+	/*Kunlun2---*/
 	wcd_usbc_analog_en1_gpio: msm_cdc_pinctrl_usbc_audio_en1 {
 		compatible = "qcom,msm-cdc-pinctrl";
 		pinctrl-names = "aud_active", "aud_sleep";
@@ -199,27 +266,45 @@
 
 	cdc_sdw_gpios: sdw_clk_data_pinctrl {
 		compatible = "qcom,msm-cdc-pinctrl";
+#ifdef CONFIG_PRODUCT_JD2019
 		pinctrl-names = "aud_active", "aud_sleep";
 		pinctrl-0 = <&sdw_clk_active &sdw_data_active>;
 		pinctrl-1 = <&sdw_clk_sleep &sdw_data_sleep>;
+#endif
 	};
+
+	/* huaqin add for JD2019-123 by xudayi at 2018/08/3 start */
+	sec_mi2s_gpios: sec_pinctrl {
+		compatible = "qcom,msm-cdc-pinctrl";
+		pinctrl-names = "aud_active", "aud_sleep";
+		pinctrl-0 = <&sec_mi2s_active &sec_mi2s_data0_active
+			&sec_mi2s_data1_active>;
+		pinctrl-1 = <&sec_mi2s_sleep &sec_mi2s_data0_sleep
+			&sec_mi2s_data1_sleep>;
+		qcom,lpi-gpios;
+	};
+	/* huaqin add for JD2019-123 by xudayi at 2018/08/3 end */
 
 	wsa_spkr_en1: wsa_spkr_en1_pinctrl {
 		compatible = "qcom,msm-cdc-pinctrl";
+#ifdef CONFIG_PRODUCT_JD2019
 		pinctrl-names = "aud_active", "aud_sleep";
 		pinctrl-0 = <&spkr_1_sd_n_active>;
 		pinctrl-1 = <&spkr_1_sd_n_sleep>;
+#endif
 	};
 
 	wsa_spkr_en2: wsa_spkr_en2_pinctrl {
 		compatible = "qcom,msm-cdc-pinctrl";
+#ifdef CONFIG_PRODUCT_JD2019
 		pinctrl-names = "aud_active", "aud_sleep";
 		pinctrl-0 = <&spkr_2_sd_n_active>;
 		pinctrl-1 = <&spkr_2_sd_n_sleep>;
+#endif
 	};
 
 	msm_sdw_codec: msm-sdw-codec@62ec1000 {
-		status = "okay";
+		status = "disabled";
 		compatible = "qcom,msm-sdw-codec";
 		reg = <0x62ec1000 0x0>;
 		interrupts = <0 88 0>;
