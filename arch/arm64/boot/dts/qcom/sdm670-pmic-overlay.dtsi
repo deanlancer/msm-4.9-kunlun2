@@ -45,7 +45,7 @@
 				= <3000000 2500000 2000000 1500000
 					1000000 500000>;
 #endif
-#if !defined(CONFIG_PRODUCT_JD2019) && !defined(CONFIG_PRODUCT_KUNLUN2)
+#if !defined(CONFIG_PRODUCT_KUNLUN2)
 		qcom,auto-recharge-soc;
 #endif
 #if defined(CONFIG_PRODUCT_KUNLUN2)
@@ -199,7 +199,7 @@
 		qcom,cycle-counter-en;
 		qcom,hold-soc-while-full;
 
-#if !defined(CONFIG_PRODUCT_JD2019) && !defined(CONFIG_PRODUCT_KUNLUN2)
+#if !defined(CONFIG_PRODUCT_KUNLUN2)
 		qcom,fg-auto-recharge-soc;
 #endif
 #if defined(CONFIG_PRODUCT_KUNLUN2)
