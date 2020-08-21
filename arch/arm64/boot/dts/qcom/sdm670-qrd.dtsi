@@ -268,39 +268,6 @@
 
 	status = "ok";
 };
-
-&tlmm {
-	pmx_ts_rst_active {
-		ts_rst_active: ts_rst_active {
-			mux {
-				pins = "gpio99";
-				function = "gpio";
-			};
-
-			config {
-				pins = "gpio99";
-				drive-strength = <16>;
-				bias-pull-up;
-			};
-		};
-	};
-
-	pmx_ts_rst_suspend {
-		ts_rst_suspend: ts_rst_suspend {
-			mux {
-				pins = "gpio99";
-				function = "gpio";
-			};
-
-			config {
-				pins = "gpio99";
-				drive-strength = <2>;
-				bias-pull-down;
-			};
-		};
-	};
-};
-
 /* huaqin add for JD2019-313 by xudayi at 2018/9/11 start */
 /*
 &soc {
