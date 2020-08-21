@@ -229,6 +229,7 @@ sxr1130-usbc-external-codec-pm660a-mtp-overlay.dtbo-base := sxr1130.dtb
 sxr1130-usbc-mtp-overlay.dtbo-base := sxr1130.dtb
 sxr1130-usbc-pm660a-mtp-overlay.dtbo-base := sxr1130.dtb
 sxr1130-qrd-overlay.dtbo-base := sxr1130.dtb
+sxr1130-svr-overlay.dtbo-base := sxr1130.dtb
 
 else
 dtb-$(CONFIG_ARCH_SDM670) += sdm670-rumi.dtb \
@@ -268,6 +269,7 @@ dtb-$(CONFIG_ARCH_SDM670) += sdm670-rumi.dtb \
 	qcs605-lc-ipcamera.dtb \
 	qcs605-lc-mtp.dtb \
 	qcs605-lc-cdp.dtb \
+	qcs605-lc-mtp-no-hdcp.dtb \
 	sdm710-mtp.dtb \
 	sdm710-cdp.dtb \
 	sdm710-qrd.dtb \
@@ -299,7 +301,8 @@ dtb-$(CONFIG_ARCH_SDM670) += sdm670-rumi.dtb \
 	sxr1130-usbc-external-codec-pm660a-mtp.dtb \
 	sxr1130-usbc-mtp.dtb \
 	sxr1130-usbc-pm660a-mtp.dtb \
-	sxr1130-qrd.dtb
+	sxr1130-qrd.dtb \
+	sxr1130-svr.dtb
 endif
 
 ifeq ($(CONFIG_BUILD_ARM64_DT_OVERLAY),y)
