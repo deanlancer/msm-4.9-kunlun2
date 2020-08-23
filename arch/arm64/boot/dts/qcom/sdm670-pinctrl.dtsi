@@ -1927,7 +1927,7 @@
 			};
 		};
 
-		gpio_jack_det_line_in {
+		/*gpio_jack_det_line_in {
 			jack_det_linein_default: jack_det_linein_default {
 				mux {
 					pins = "gpio124";
@@ -1936,13 +1936,13 @@
 
 				config {
 					pins = "gpio124";
-					bias-pull-up; /* pull up */
+					bias-pull-up;
 					input-enable;
 				};
 			};
-		};
+		};*/
 
-		gpio_jack_det_line_out {
+		/*gpio_jack_det_line_out {
 			jack_det_lineout_default: jack_det_lineout_default {
 				mux {
 					pins = "gpio125";
@@ -1951,11 +1951,11 @@
 
 				config {
 					pins = "gpio125";
-					bias-pull-up; /* pull up */
+					bias-pull-up;
 					input-enable;
 				};
 			};
-		};
+		};*/
 
 		/*flash_led3_front {
 			flash_led3_front_en: flash_led3_front_en {
