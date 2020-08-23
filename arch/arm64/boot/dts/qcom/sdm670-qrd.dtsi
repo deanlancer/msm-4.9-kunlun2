@@ -20,6 +20,7 @@
 
 #if defined(CONFIG_PRODUCT_KUNLUN2)
 #include "sdm670-camera-sensor-kunlun2.dtsi"
+#include "lenovo-kunlun2.dtsi"
 #endif
 &qupv3_se10_i2c {
 #include "smb1355.dtsi"
