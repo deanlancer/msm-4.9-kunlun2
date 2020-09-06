@@ -135,96 +135,6 @@
 //add by gongdb for kunlun2 vibrator end
 
 //add by huanghuan5 for kunlun audio start
-&tlmm {
-                  pri_mi2s {
-			pri_mi2s_sleep: pri_mi2s_sleep {
-				mux {
-				pins = "gpio65","gpio67","gpio68";
-				function = "pri_mi2s";
-				};
-
-				config {
-				pins = "gpio65","gpio67","gpio68";
-				drive-strength = <2>; /* 2 mA */
-				};
-			};
-
-			pri_mi2s_active: pri_mi2s_active {
-			 mux {
-				 pins = "gpio65","gpio67","gpio68";
-				 function = "pri_mi2s";
-			 };
-			 config {
-				 pins = "gpio65","gpio67","gpio68";
-				 drive-strength = <2>; /* 8 mA */
-			 };
-		 };
-		};
-
-		pri_mi2s_ws {
-			pri_mi2s_ws_sleep: pri_mi2s_ws_sleep {
-			   mux {
-				   pins = "gpio66";
-				   function = "pri_mi2s_ws";
-			   };
-
-			   config {
-				   pins = "gpio66";
-				   drive-strength = <2>; /* 2 mA */
-			   };
-		   };
-
-			pri_mi2s_ws_active: pri_mi2s_ws_active {
-			    mux {
-				    pins = "gpio66";
-				    function = "pri_mi2s_ws";
-			    };
-			    config {
-				    pins = "gpio66";
-				    drive-strength = <2>; /* 8 mA */
-			    };
-		    };
-		};
-
-};
-&soc {	
-
-        pri_mi2s_gpios: pri_mi2s_pinctrl {
-               status = "ok";
-               compatible = "qcom,msm-cdc-pinctrl";
-               pinctrl-names = "aud_active", "aud_sleep";
-               pinctrl-0 = <&pri_mi2s_active &pri_mi2s_ws_active>;
-               pinctrl-1 = <&pri_mi2s_sleep &pri_mi2s_ws_sleep>;
-	};
-	
-
-      	qupv3_se2_i2c: i2c@888000 {
-		compatible = "qcom,i2c-geni";
-		reg = <0x888000 0x4000>;
-		interrupts = <GIC_SPI 603 0>;
-		#address-cells = <1>;
-		#size-cells = <0>;
-		clock-names = "se-clk", "m-ahb", "s-ahb";
-		clocks = <&clock_gcc GCC_QUPV3_WRAP0_S2_CLK>,
-			<&clock_gcc GCC_QUPV3_WRAP_0_M_AHB_CLK>,
-			<&clock_gcc GCC_QUPV3_WRAP_0_S_AHB_CLK>;
-		dmas = <&gpi_dma0 0 2 3 64 0>,
-			<&gpi_dma0 1 2 3 64 0>;
-		dma-names = "tx", "rx";
-		pinctrl-names = "default", "sleep";
-		pinctrl-0 = <&qupv3_se2_i2c_active>;
-		pinctrl-1 = <&qupv3_se2_i2c_sleep>;
-		qcom,wrapper-core = <&qupv3_0>;
-		status = "ok";
-	};
-};
-&dai_mi2s0 {
-     qcom,msm-mi2s-rx-lines = <1>;
-     qcom,msm-mi2s-tx-lines = <2>;
-     };
-
-	   
-
 &int_codec {
      qcom,mi2s-audio-intf;
      qcom,pri-mi2s-gpios = <&pri_mi2s_gpios>;
@@ -244,12 +154,6 @@
 			reset-gpio= <&tlmm 91 0>;
 	        };
 	};
-	
-/ {
-	aliases {
-	i2c2 = &qupv3_se2_i2c;
-	};
-};
 
 //add by huanghuan5 for kunlun audio end
 
