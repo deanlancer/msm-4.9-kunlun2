@@ -148,7 +148,7 @@
 		pinctrl-0 = <&qupv3_se2_i2c_active>;
 		pinctrl-1 = <&qupv3_se2_i2c_sleep>;
 		qcom,wrapper-core = <&qupv3_0>;
-		status = "disabled";
+		status = "ok";
 	};
 
 	qupv3_se3_i2c: i2c@88c000 {
