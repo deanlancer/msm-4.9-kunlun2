@@ -189,6 +189,10 @@ int backlight_device_set_brightness(struct backlight_device *bd,
 //[ZUIP-1650][JD19][LCM]modify by gongdb1 for echo max_brightness end
 		else {
 			pr_debug("set brightness to %lu\n", brightness);
+			if (!bd->use_count && brightness)
+				bd->use_count++;
+			else if (bd->use_count && !brightness)
+				--bd->use_count;
 			bd->props.brightness = brightness;
 			rc = backlight_update_status(bd);
 		}
