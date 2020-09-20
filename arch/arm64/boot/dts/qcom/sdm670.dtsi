@@ -43,7 +43,7 @@
 		hsuart0 = &qupv3_se6_4uart;
 #if defined(CONFIG_PRODUCT_KUNLUN2)
 		i2c2 = &qupv3_se2_i2c;
-		//hsuart1 = &qupv3_se3_4uart;
+		hsuart1 = &qupv3_se3_4uart;
 #endif
 	};
 
