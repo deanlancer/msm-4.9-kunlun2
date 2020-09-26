@@ -11,27 +11,17 @@ struct tp_sys_info{
         struct device *dev;
 };
 static atomic_t tp_device_count;
-//int gesture_dubbleclick_en = 0;
 static int double_gesture_switch;
-#ifdef CONFIG_PRODUCT_ZAP
-extern void gsx_gesture_en(int enable);
-#endif
 //add by gongdb begin
 static int tp_screen_orientation_switch = 0;
 //add by gongdb end
 
-#if defined(CONFIG_PRODUCT_JD2019) || defined(CONFIG_PRODUCT_KUNLUN2)
+#if defined(CONFIG_PRODUCT_KUNLUN2)
 extern void fts_gesture_en(int enable);
 
 //add by gongdb degin
 extern void fts_tp_screen_switch(int enable);
 //add by gongdb end
-#endif
-#ifdef CONFIG_PRODUCT_KUNLUN
-extern void synaptics_gesture_en(int enable);
-#endif
-#ifdef CONFIG_PRODUCT_SPROUT
-extern void nvt_gesture_en(int enable);
 #endif
 static ssize_t ft_gesture_wakeup_show(struct device *dev,
                 struct device_attribute *attr, char *buf)
@@ -49,28 +39,12 @@ static ssize_t ft_gesture_wakeup_store(struct device *dev,
 		double_gesture_switch = 1;
 	else
 		double_gesture_switch = 0;
-#if defined(CONFIG_PRODUCT_JD2019) || defined(CONFIG_PRODUCT_KUNLUN2)
+#if defined(CONFIG_PRODUCT_KUNLUN2)
 	fts_gesture_en(double_gesture_switch);
-#endif
-#ifdef CONFIG_PRODUCT_KUNLUN
-	synaptics_gesture_en(double_gesture_switch);
-#endif
-#if defined(CONFIG_PRODUCT_SPROUT)
-	nvt_gesture_en(double_gesture_switch);
-#endif
-#ifdef CONFIG_PRODUCT_ZAP
-	gsx_gesture_en(double_gesture_switch);
 #endif
        return count;
 
 }
-#if 0
-int is_gesture_dubbleclick_en(void)
-{
-	return gesture_dubbleclick_en;
-}
-EXPORT_SYMBOL_GPL(is_gesture_dubbleclick_en);
-#endif
 
 //add by gongdb begin
 static ssize_t tp_screen_orientation_switch_show(struct device *dev,
@@ -92,14 +66,14 @@ static ssize_t tp_screen_orientation_switch_store(struct device *dev,
         else
                 tp_screen_orientation_switch = 0;
 
-#if defined(CONFIG_PRODUCT_JD2019) || defined(CONFIG_PRODUCT_KUNLUN2)
+#if defined(CONFIG_PRODUCT_KUNLUN2)
         fts_tp_screen_switch(tp_screen_orientation_switch);
 #endif
        return count;
 
 }
 
-#if defined(CONFIG_PRODUCT_JD2019) || defined(CONFIG_PRODUCT_KUNLUN2)
+#if defined(CONFIG_PRODUCT_KUNLUN2)
 void fts_reset_tp_screen_switch(void)
 {
 	fts_tp_screen_switch(tp_screen_orientation_switch);
