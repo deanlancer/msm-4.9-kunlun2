@@ -39,7 +39,7 @@
 		dpdm-supply = <&qusb_phy0>;
 
 #if defined(CONFIG_PRODUCT_KUNLUN2)
-		qcom,thermal-mitigation = <2900000 2900000 2500000 2000000 1500000 500000 400000 300000 200000 100000>;
+		qcom,thermal-mitigation = <2900000 2850000 2700000 2625000 2575000 2425000 2275000 2125000 2000000 1800000 1650000 1500000 1360000 1200000 1060000 900000 752500 525000 500000>;
 #else
 		qcom,thermal-mitigation
 				= <3000000 2500000 2000000 1500000
@@ -205,11 +205,17 @@
 #if defined(CONFIG_PRODUCT_KUNLUN2)
 		qcom,fg-recharge-voltage = <4360>;
 		//hzn add
-		qcom,fg-sys-term-current = <(-200)>;
-		qcom,fg-chg-term-current = <80>;
+		qcom,fg-sys-term-current = <(-200)>; //-300
+		qcom,fg-chg-term-current = <80>; //200
+		qcom,fg-recharge-soc-thr = <99>;
+		qcom,fg-cutoff-current = <200>;
 		qcom,fg-cutoff-voltage = <3400>;
 		qcom,fg-empty-voltage = <3000>;
+		qcom,fg-jeita-hyst-temp = <1>;
 		qcom,fg-delta-soc-thr = <1>;
+		qcom,fg-batt-temp-delta = <6>;
+		qcom,slope-limit-temp-threshold = <100>;
+		qcom,slope-limit-coeffs = <10 11 12 13>;		
 		qcom,fg-force-load-profile;
 		//add end
 #endif
