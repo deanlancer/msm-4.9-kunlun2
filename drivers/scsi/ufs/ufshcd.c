@@ -2040,7 +2040,6 @@ start:
 			spin_lock_irqsave(hba->host->host_lock, flags);
 			goto start;
 		}
->>>>>>> 056567bc3db24b730506e1ac3b311d28fe68e568
 		break;
 	case REQ_HIBERN8_ENTER:
 		if (cancel_delayed_work(&hba->hibern8_on_idle.enter_work)) {
