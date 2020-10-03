@@ -2603,6 +2603,9 @@ static int smb2_probe(struct platform_device *pdev)
 	/* set driver data before resources request it */
 	platform_set_drvdata(pdev, chip);
 
+	/* wakeup init should be done at the beginning of smb2_probe */
+	device_init_wakeup(chg->dev, true);
+
 	rc = smb2_init_vbus_regulator(chip);
 	if (rc < 0) {
 		pr_err("Couldn't initialize vbus regulator rc=%d\n",
@@ -2718,7 +2721,9 @@ static int smb2_probe(struct platform_device *pdev)
 	}
 	batt_charge_type = val.intval;
 
+#if 0
 	device_init_wakeup(chg->dev, true);
+#endif
 
 #if defined(CONFIG_PRODUCT_KUNLUN2)
 	//houzn add
