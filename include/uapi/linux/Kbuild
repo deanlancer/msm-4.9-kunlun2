@@ -7,7 +7,6 @@ endif
 ifeq ($(wildcard $(srctree)/arch/$(SRCARCH)/include/uapi/asm/kvm.h),)
 no-export-headers += kvm.h
 endif
-
 ifeq ($(wildcard $(srctree)/arch/$(SRCARCH)/include/uapi/asm/kvm_para.h),)
 no-export-headers += kvm_para.h
 endif
