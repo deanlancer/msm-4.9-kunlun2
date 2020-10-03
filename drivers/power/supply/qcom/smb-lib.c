@@ -5530,6 +5530,8 @@ int smblib_init(struct smb_charger *chg)
 			return rc;
 		}
 
+		/* xiaomi: move it to fg driver */
+#if 0
 		rc = qcom_step_chg_init(chg->dev, chg->step_chg_enabled,
 						chg->sw_jeita_enabled);
 		if (rc < 0) {
@@ -5537,6 +5539,7 @@ int smblib_init(struct smb_charger *chg)
 				rc);
 			return rc;
 		}
+#endif
 
 		rc = smblib_create_votables(chg);
 		if (rc < 0) {
