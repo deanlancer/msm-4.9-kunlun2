@@ -76,6 +76,8 @@ CONFIG_MSM_JTAGV8 is not set
 ##
 CONFIG_SND_PCI=y
 ##
+# CONFIG_FTRACE is not set
+##
 # CONFIG_LOCALVERSION_AUTO is not set
 # CONFIG_FHANDLE is not set
 CONFIG_AUDIT=y
