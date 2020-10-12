@@ -9,15 +9,22 @@ qcom,QL2_VK_4050mAH_47k_Dec5th2018_PM670GUI00045 {
 	qcom,battery-beta = <3380>;
 	qcom,fastchg-current-ma = <2900>;
 	
-	qcom,jeita-fcc-ranges = <0    200    800000
-				 			 200  450   2900000
-				 			 450  500   2000000>;
+	qcom,jeita-fcc-ranges = <0	50	375000
+							51	100	1150000
+							101	150	1950000
+							151	450	2900000
+							451	550	1950000>;
 	
-	qcom,jeita-fv-ranges = <0    450   4400000
-				 			450  500   4100000>;
+	qcom,jeita-fv-ranges = <0	50	4400000
+							51	100	4400000
+							101	150	4400000
+							151	450	4400000
+							451	550	4100000>;
 
-	qcom,step-chg-ranges = <3500000  4300000  2900000
-							4301000  4400000  2900000>;
+	qcom,step-chg-ranges = <3500000  3800000  2900000
+							3800001  4000000  2400000
+							4000001  4300000  2000000
+							4300001  4400000  1800000>;
 	
 	qcom,battery-type = "QL2_VK_4050mAH_47k_PM670";
 	qcom,checksum = <0x5A69>;
