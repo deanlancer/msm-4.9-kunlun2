@@ -76,6 +76,8 @@ CONFIG_PANIC_TIMEOUT=1
 # CONFIG_DETECT_HUNG_TASK is not set
 # CONFIG_WQ_WATCHDOG is not set
 ##
+# CONFIG_DEBUG_SET_MODULE_RONX is not set
+##
 # CONFIG_UTS_NS is not set
 CONFIG_MSM_JTAGV8 is not set
 # CONFIG_RAS is not set
