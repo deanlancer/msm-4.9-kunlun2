@@ -2640,10 +2640,8 @@ void task_tick_numa(struct rq *rq, struct task_struct *curr)
 			curr->numa_scan_period = task_scan_min(curr);
 		curr->node_stamp += period;
 
-		if (!time_before(jiffies, curr->mm->numa_next_scan)) {
-			init_task_work(work, task_numa_work); /* TODO: move this into sched_fork() */
-			task_work_add(curr, work, true);
-		}
+		if (!time_before(jiffies, curr->mm->numa_next_scan))
+			task_work_add(curr, work, TWA_RESUME);
 	}
 }
 #else
