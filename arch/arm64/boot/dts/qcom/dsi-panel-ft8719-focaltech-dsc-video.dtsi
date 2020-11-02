@@ -49,6 +49,11 @@
 		qcom,mdss-dsi-border-color = <0>;
 		qcom,mdss-dsi-bpp = <24>;
 		qcom,mdss-dsi-post-init-delay = <1>;
+
+		qcom,ulps-enabled;
+		qcom,suspend-ulps-enabled;
+		qcom,panel-allow-phy-poweroff;
+
 		qcom,mdss-dsi-display-timings {
 			timing@0{
 				qcom,mdss-dsi-panel-width = <1080>;
