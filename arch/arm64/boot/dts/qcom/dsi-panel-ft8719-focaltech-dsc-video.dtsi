@@ -66,9 +66,6 @@
 				qcom,mdss-dsi-v-front-porch = <120>;
 				qcom,mdss-dsi-v-pulse-width = <4>;
 				qcom,mdss-dsi-panel-framerate = <60>;
-				qcom,mdss-dsi-max-refresh-rate = <75>;
-				qcom,mdss-dsi-min-refresh-rate = <75>;
-				qcom,mdss-dsi-panel-framerate = <60>;
 				qcom,mdss-dsi-panel-clockrate = <1028000000>;
 				qcom,mdss-dsi-on-command = [
 					39 01 00 00 00 00 02 00 00
