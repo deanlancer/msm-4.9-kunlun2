@@ -892,6 +892,12 @@ static int32_t cam_eeprom_pkt_parse(struct cam_eeprom_ctrl_t *e_ctrl, void *arg)
 			}else{
 				g_camera_eeprom_status |= EEPROM_READ_MEMORY_ERROR;
 				CAM_ERR(CAM_EEPROM, "read_eeprom_memory failed %d", rc);
+				cam_destroy_device_hdl(e_ctrl->bridge_intf.device_hdl);
+				CAM_ERR(CAM_EEPROM, "destroying the device hdl");
+
+				e_ctrl->bridge_intf.device_hdl = -1;
+				e_ctrl->bridge_intf.link_hdl = -1;
+				e_ctrl->bridge_intf.session_hdl = -1;
 				cam_eeprom_power_down(e_ctrl);
 				msleep(10);
 				cam_eeprom_power_up(e_ctrl, &soc_private->power_info);
@@ -1059,7 +1065,7 @@ int32_t cam_eeprom_driver_cmd(struct cam_eeprom_ctrl_t *e_ctrl, void *arg)
 	CAM_ERR(CAM_EEPROM, "HQ_EEPROM_CAM_CONFIG_DEV");
 		rc = cam_eeprom_pkt_parse(e_ctrl, arg);
 		if (rc) {
-			CAM_ERR(CAM_EEPROM, "Failed in eeprom pkt Parsing");
+			CAM_ERR(CAM_EEPROM, "Failed in eeprom pkt Parsing, rc %d", rc);
 			goto release_mutex;
 		}
 		break;
