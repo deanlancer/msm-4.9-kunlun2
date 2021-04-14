@@ -188,3 +188,36 @@
         <2054400>,
         <2208000>;
 };
+
+/* sdm670.dtsi */
+&CPU0 {
+	clock-frequency = <1708800000>;
+};
+
+&CPU1 {
+	clock-frequency = <1708800000>;
+};
+
+&CPU2 {
+	clock-frequency = <1708800000>;
+};
+
+&CPU3 {
+	clock-frequency = <1708800000>;
+};
+
+&CPU4 {
+	clock-frequency = <1708800000>;
+};
+
+&CPU5 {
+	clock-frequency = <1708800000>;
+};
+
+&CPU6 {
+	clock-frequency = <2208000000>;
+};
+
+&CPU7 {
+	clock-frequency = <2208000000>;
+};
