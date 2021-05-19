@@ -27,3 +27,4 @@ curl -A "$USER_AGENT" -LsS --connect-timeout 30 "https://git.zx2c4.com/wireguard
 sed -i 's/tristate/bool/;s/default m/default y/;' net/wireguard/Kconfig
 sed -i '/#define totalram_pages() totalram_pages/d' net/wireguard/compat/compat.h
 touch net/wireguard/.check
+git add net/wireguard && git commit -s --message="wireguard: Update to version ${VERSION}"
