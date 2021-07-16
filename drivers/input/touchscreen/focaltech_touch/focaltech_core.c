@@ -2001,7 +2001,7 @@ static int fts_ts_suspend(struct device *dev)
 }
 
 //add by gongdb begin
-#if defined(CONFIG_PRODUCT_JD2019) || defined(CONFIG_PRODUCT_KUNLUN2)
+#if defined(CONFIG_PRODUCT_KUNLUN2)
 #if FTS_TP_SCREEN_SWITCH
 extern void fts_reset_tp_screen_switch(void);
 #endif
@@ -2060,7 +2060,7 @@ static int fts_ts_resume(struct device *dev)
     fts_irq_enable();
 
 //add by gongdb begin
-#if defined(CONFIG_PRODUCT_JD2019) || defined(CONFIG_PRODUCT_KUNLUN2)
+#if defined(CONFIG_PRODUCT_KUNLUN2)
 #if FTS_TP_SCREEN_SWITCH
     fts_reset_tp_screen_switch();
 #endif
