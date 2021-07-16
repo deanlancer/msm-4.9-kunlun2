@@ -234,10 +234,6 @@
 //add by gongdb for kunlun2 touch panel begin
 #ifdef CONFIG_PRODUCT_KUNLUN2
 #define FTS_UPGRADE_FW_FILE                      "include/firmware/Kunlun2_FT8719Ver0x0c_app.i"
-#else
-/* huaqin modify for JD2019-690 by gongdb at 2019/01/08 start */
-#define FTS_UPGRADE_FW_FILE                      "include/firmware/HQ_QL1822_JD2019_FT8719_TM6.3_Ver0x1a_20190107_app.i"
-/* huaqin modify for JD2019-690 by gongdb at 2019/01/08 end */
 #endif
 //add by gongdb for kunlun2 touh panel end
 
