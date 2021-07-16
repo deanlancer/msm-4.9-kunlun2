@@ -58,9 +58,11 @@ TFA_INC :=	-I$(AUDIO_ROOT)/asoc/codecs/tfa98xx/inc
 # for TFA9874 Codec
 	TFA9874_OBJS += src/tfa98xx.o
 	TFA9874_OBJS += src/tfa_container.o
-	TFA9874_OBJS += src/tfa_debug.o
 	TFA9874_OBJS += src/tfa_dsp.o
 	TFA9874_OBJS += src/tfa_init.o
+#ifdef CONFIG_DEBUG_FS	
+	TFA9874_OBJS += src/tfa_debug.o
+#endif
 
 LINUX_INC +=	-Iinclude/linux
 
