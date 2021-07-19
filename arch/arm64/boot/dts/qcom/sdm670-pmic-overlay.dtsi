@@ -431,49 +431,11 @@
 &thermal_zones {
 	xo-therm-step {
 		trips {
-#if defined( CONFIG_PRODUCT_JD2019 )
-			batt_trip1: batt-trip1 {
-				temperature = <50000>;
-				hysteresis = <4000>;
-				type = "passive";
-			};
-			batt_trip2: batt-trip2 {
-				temperature = <52000>;
-				hysteresis = <2000>;
-				type = "passive";
-			};
-			batt_trip3: batt-trip3 {
-				temperature = <54000>;
-				hysteresis = <2000>;
-				type = "passive";
-			};
-			batt_trip4: batt-trip4 {
-				temperature = <56000>;
-				hysteresis = <2000>;
-				type = "passive";
-			};
-#endif
+
 		};
 
 		cooling-maps {
-#if defined( CONFIG_PRODUCT_JD2019 )
-			battery_lvl1 {
-				trip = <&batt_trip1>;
-				cooling-device = <&pm660_charger 1 1>;
-			};
-			battery_lvl2 {
-				trip = <&batt_trip2>;
-				cooling-device = <&pm660_charger 2 2>;
-			};
-			battery_lvl3 {
-				trip = <&batt_trip3>;
-				cooling-device = <&pm660_charger 3 3>;
-			};
-			battery_lvl4 {
-				trip = <&batt_trip4>;
-				cooling-device = <&pm660_charger 4 4>;
-			};
-#endif
+
 		};
 	};
 
