@@ -42,10 +42,6 @@
 #define SUPPORT_BATTERY_AGE
 #define SUPPORT_USER_CHARGE_OP
 
-#if defined(CONFIG_PRODUCT_ZAP)
-#define SUPPORT_VENDOR_USB_PLUGIN_AWAKE
-#endif
-
 static bool is_secure(struct smb_charger *chg, int addr)
 {
 	if (addr == SHIP_MODE_REG || addr == FREQ_CLK_DIV_REG)
@@ -3793,20 +3789,7 @@ void smblib_usb_plugin_locked(struct smb_charger *chg)
 		if (rc < 0)
 			smblib_err(chg, "Couldn't disable DPDM rc=%d\n", rc);
 	}
-#if defined(CONFIG_PRODUCT_JD2019)
-#if defined(CUSTOM_IDENTIFY_FLOAT_CHARGER)
-	if (vbus_rising)
-	{
-		schedule_delayed_work(&smbchg_dev->lenovo_chg_flow_work, msecs_to_jiffies(LENOVO_CHG_FLOW_WORK_DELAY));
-		schedule_delayed_work(&smbchg_dev->reset_max_fcc_current_work, msecs_to_jiffies(PLAY_GMAE_RESET_CURRENT_DELAY_MS));
 
-	}
-	else
-	{
-		lenovo_typec_removal_function(chg);
-	}
-#endif
-#endif
 	if (chg->connector_type == POWER_SUPPLY_CONNECTOR_MICRO_USB)
 		smblib_micro_usb_plugin(chg, vbus_rising);
 

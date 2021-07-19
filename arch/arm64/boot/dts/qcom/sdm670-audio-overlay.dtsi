@@ -266,11 +266,6 @@
 
 	cdc_sdw_gpios: sdw_clk_data_pinctrl {
 		compatible = "qcom,msm-cdc-pinctrl";
-#ifdef CONFIG_PRODUCT_JD2019
-		pinctrl-names = "aud_active", "aud_sleep";
-		pinctrl-0 = <&sdw_clk_active &sdw_data_active>;
-		pinctrl-1 = <&sdw_clk_sleep &sdw_data_sleep>;
-#endif
 	};
 
 	/* huaqin add for JD2019-123 by xudayi at 2018/08/3 start */
@@ -287,20 +282,10 @@
 
 	wsa_spkr_en1: wsa_spkr_en1_pinctrl {
 		compatible = "qcom,msm-cdc-pinctrl";
-#ifdef CONFIG_PRODUCT_JD2019
-		pinctrl-names = "aud_active", "aud_sleep";
-		pinctrl-0 = <&spkr_1_sd_n_active>;
-		pinctrl-1 = <&spkr_1_sd_n_sleep>;
-#endif
 	};
 
 	wsa_spkr_en2: wsa_spkr_en2_pinctrl {
 		compatible = "qcom,msm-cdc-pinctrl";
-#ifdef CONFIG_PRODUCT_JD2019
-		pinctrl-names = "aud_active", "aud_sleep";
-		pinctrl-0 = <&spkr_2_sd_n_active>;
-		pinctrl-1 = <&spkr_2_sd_n_sleep>;
-#endif
 	};
 
 	msm_sdw_codec: msm-sdw-codec@62ec1000 {
