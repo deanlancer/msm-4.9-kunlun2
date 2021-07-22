@@ -276,6 +276,7 @@ int fscrypt_fname_disk_to_usr(struct inode *inode,
 					   oname->name);
 		return 0;
 	}
+	
 	if (hash) {
 		digested_name.hash = hash;
 		digested_name.minor_hash = minor_hash;
