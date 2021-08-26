@@ -1,26 +1,22 @@
 # exfat-linux
 
-This __exFAT filesystem module for Linux kernel__ is based on `sdFAT` drivers by Samsung, which is used with their smartphone lineups.
-
-The main objective of **exfat-linux** is to provide the best generic kernel drivers for exFAT. That means Samsung-specific modifications such as fat12/16/32 handlings, defrag and etc has been removed to make the code portable.
+This __exFAT filesystem module for Linux kernel__ is a backport of the latest Linux mainline's exFAT drivers by Samsung.
 
 This project can be used for everyday Linux users by simply doing `make && make install`. Ubuntu users can simply add a PPA and start using it, without even downloading the code. This can also be directly dropped-in to an existing Linux kernel source for building the filesystem drivers inline, which should be useful for Android kernel developers.
 
----------------------------------------
-
-[exfat-nofuse]'s development has been stale for more than a year with no clear maintainership. It's also been lacking critical upstream(*which is Samsung*) changes.
-
-[exfat-nofuse]: https://github.com/dorimanx/exfat-nofuse
-
-**exfat-linux** is:
-
- * Based on a totally different and newer base provided by Samsung
- * Intended to keep upstream changes constantly merged
- * Intended to fix breakage from newer kernels as-soon-as-possible
-
-**exfat-linux** has been tested with all major LTS kernels ranging from 3.4 to 4.19 and the ones Canonical uses for Ubuntu: `3.4`, `3.10`, `3.18`, `4.1`, `4.4`, `4.9`, `4.14`, `4.19` and `4.15`, `5.0`, `5.2`, and `5.3-rc`.
+**exfat-linux** has been tested with all major LTS kernels ranging from v4.9 to v5.4 and the ones Canonical uses for Ubuntu: `v4.9`, `v4.14`, `v4.19`, `v5.4` and `v4.15`, `v5.3`, and `v5.6`.
 
 It's also been tested with `x86(i386)`, `x86_64(amd64)`, `arm32(AArch32)` and `arm64(AArch64)`.
+
+Linux kernels since `v5.4` includes an exFAT driver, but it is an extremely outdated version from 2016. This was later revised by Samsung directly with `v5.7`.
+
+People on `v5.7` kernel or higher can just use the bundled exFAT drivers.
+
+People on `v5.4+` are highly recommended to use this drivers.
+
+Support for kernel versions lower than `v4.9` were dropped for easier maintenance. For people interested in exFAT support for said kernels, please use the [old branch](https://github.com/arter97/exfat-linux/tree/old). It still works nicely and it's actively being shipped to production smartphones.
+
+exfat-linux is planned to be maintained until Android devices with `v5.7+` LTS kernel become more common.
 
 ## Disclaimer
 
@@ -68,6 +64,8 @@ This will use DKMS(Dynamic Kernel Module Support) and automatically build exFAT 
 
 This will install the module to your __currently running kernel__.
 
+__If you're running a `v5.4+` kernel, it is highly recommended to reboot at this point to prevent the existing staging exFAT drivers to load.__
+
 4. And finally load
 
    `sudo modprobe exfat`
@@ -109,13 +107,15 @@ For reference, existing exFAT implementations were tested and compared on a serv
 
 Linux 4.14 was used as higher LTS kernels don't work with [exfat-nofuse] at the time of testing.
 
+__The new base backported from mainline is not benchmarked yet.__
+
 ### ● Ramdisk
 
 #### fio sequential I/O
 
 | Implementation   | Base   | Read         | Write        |
 | ---------------  | ------ | ------------ | ------------ |
-| **exfat-linux**  | 2.1.10 |    7042 MB/s |    2173 MB/s |
+| **exfat-linux**  | 2.2.0  |    7042 MB/s |    2173 MB/s |
 | [exfat-nofuse]   | 1.2.9  |    6849 MB/s |    1961 MB/s |
 | [exfat-fuse]     | N/A    |    3097 MB/s |    1710 MB/s |
 | ext4             | N/A    |    7352 MB/s |    3333 MB/s |
@@ -124,7 +124,7 @@ Linux 4.14 was used as higher LTS kernels don't work with [exfat-nofuse] at the 
 
 | Implementation   | Base   | Read         | Write        |
 | ---------------  | ------ | ------------ | ------------ |
-| **exfat-linux**  | 2.1.10 |     760 MB/s |    2222 MB/s |
+| **exfat-linux**  | 2.2.0  |     760 MB/s |    2222 MB/s |
 | [exfat-nofuse]   | 1.2.9  |     760 MB/s |    2160 MB/s |
 | [exfat-fuse]     | N/A    |     1.7 MB/s |     1.6 MB/s |
 | ext4             | N/A    |     747 MB/s |    2816 MB/s |
@@ -135,7 +135,7 @@ Linux 4.14 was used as higher LTS kernels don't work with [exfat-nofuse] at the 
 
 | Implementation   | Base   | Read         | Write        |
 | ---------------  | ------ | ------------ | ------------ |
-| **exfat-linux**  | 2.1.10 |    1283 MB/s |    1832 MB/s |
+| **exfat-linux**  | 2.2.0  |    1283 MB/s |    1832 MB/s |
 | [exfat-nofuse]   | 1.2.9  |    1285 MB/s |    1678 MB/s |
 | [exfat-fuse]     | N/A    |     751 MB/s |    1464 MB/s |
 | ext4             | N/A    |    1283 MB/s |    3356 MB/s |
@@ -144,7 +144,7 @@ Linux 4.14 was used as higher LTS kernels don't work with [exfat-nofuse] at the 
 
 | Implementation   | Base   | Read         | Write        |
 | ---------------  | ------ | ------------ | ------------ |
-| **exfat-linux**  | 2.1.10 |      26 MB/s |    1885 MB/s |
+| **exfat-linux**  | 2.2.0  |      26 MB/s |    1885 MB/s |
 | [exfat-nofuse]   | 1.2.9  |      24 MB/s |    1827 MB/s |
 | [exfat-fuse]     | N/A    |     1.6 MB/s |     1.6 MB/s |
 | ext4             | N/A    |      29 MB/s |    2821 MB/s |
@@ -159,23 +159,11 @@ Linux 4.14 was used as higher LTS kernels don't work with [exfat-nofuse] at the 
 * dmask
 * fmask
 * allow_utime
-* codepage
 * iocharset
 * quiet
-* utf8
-* tz
+* time_offset
 
   * Please refer to the [vfat](https://github.com/torvalds/linux/blob/master/Documentation/filesystems/vfat.txt)'s documentation.
-
-* namecase
-
-  * Passing `namecase=1` as a mount option will make exFAT operate in a case-sensitive mode.
-
-  * Default is insensitive mode.
-
-* symlink
-
-  * Allow a symlink to be created under exFAT.
 
 * errors=continue
 
@@ -192,11 +180,5 @@ Linux 4.14 was used as higher LTS kernels don't work with [exfat-nofuse] at the 
 * discard
 
   * Enable the use of discard/TRIM commands to ensure flash storage doesn't run out of free blocks. This option may introduce latency penalty on file removal operations.
-
-* delayed_meta
-
-  * Delay flushing metadata, hence improving performance.
-
-  * This is enabled by default, please pass `nodelayed_meta` to disable it.
 
 ## Enjoy!
