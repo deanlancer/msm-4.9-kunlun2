@@ -1,4 +1,4 @@
-/* Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2017-2018, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -559,6 +559,7 @@ void cam_cci_get_clk_rates(struct cci_device *cci_dev,
 			return;
 		}
 	}
+	return;
 }
 
 static int32_t cam_cci_set_clk_param(struct cci_device *cci_dev,
@@ -869,8 +870,8 @@ static int32_t cam_cci_burst_read(struct v4l2_subdev *sd,
 	struct cam_cci_ctrl *c_ctrl)
 {
 	int32_t rc = 0;
-	uint32_t val = 0, i = 0, j = 0;
-	unsigned long rem_jiffies, flags;
+	uint32_t val = 0, i = 0;
+	unsigned long rem_jiffies;
 	int32_t read_words = 0, exp_words = 0;
 	int32_t index = 0, first_byte = 0, total_read_words = 0;
 	enum cci_i2c_master_t master;
@@ -989,22 +990,19 @@ static int32_t cam_cci_burst_read(struct v4l2_subdev *sd,
 
 	val = 1 << ((master * 2) + queue);
 	cam_io_w_mb(val, base + CCI_QUEUE_START_ADDR);
-
 	exp_words = ((read_cfg->num_byte / 4) + 1);
-	CAM_DBG(CAM_CCI, "waiting for threshold [exp_words %d]", exp_words);
 
-	while (total_read_words != exp_words) {
+	//CAM_ERR(CAM_CCI, "total_read_words(%d), exp_words(%d)", total_read_words, exp_words);
+
+	while (exp_words != total_read_words) {
 		rem_jiffies = wait_for_completion_timeout(
-			&cci_dev->cci_master_info[master].th_complete,
+			&cci_dev->cci_master_info[master].reset_complete,
 			CCI_TIMEOUT);
+		//CAM_ERR(CAM_CCI, "rem_jiffies after wait is %ld", rem_jiffies);
 		if (!rem_jiffies) {
 			rc = -ETIMEDOUT;
-			val = cam_io_r_mb(base +
-				CCI_I2C_M0_READ_BUF_LEVEL_ADDR +
-				master * 0x100);
-			CAM_ERR(CAM_CCI,
-				"wait_for_completion_timeout rc = %d FIFO buf_lvl:0x%x",
-				rc, val);
+			val = cam_io_r_mb(base + CCI_I2C_M0_READ_BUF_LEVEL_ADDR + master * 0x100);
+			CAM_ERR(CAM_CCI, "wait_for_completion_timeout rc = %d FIFO buf_lvl:0x%x", rc, val);
 #ifdef DUMP_CCI_REGISTERS
 			cam_cci_dump_registers(cci_dev, master, queue);
 #endif
@@ -1012,85 +1010,36 @@ static int32_t cam_cci_burst_read(struct v4l2_subdev *sd,
 			goto rel_mutex;
 		}
 
-		read_words = cam_io_r_mb(base +
-			CCI_I2C_M0_READ_BUF_LEVEL_ADDR + master * 0x100);
-		if (read_words <= 0) {
-			CAM_DBG(CAM_CCI, "FIFO Buffer lvl is 0");
-			continue;
+		read_words = cam_io_r_mb(base + CCI_I2C_M0_READ_BUF_LEVEL_ADDR + master * 0x100);
+		total_read_words += read_words;
+
+		//CAM_DBG(CAM_CCI, "total_read_words %d, read_words %d", total_read_words,read_words);
+
+		if (0 == total_read_words || 0 == read_words || total_read_words > exp_words){
+			CAM_ERR(CAM_CCI, "total_read_words(%d) > exp_words(%d) Exit!",
+			total_read_words,exp_words);
+			cam_cci_flush_queue(cci_dev, master);
+			rc = -ENODATA;
+			goto rel_mutex;
 		}
 
-		j++;
-		CAM_DBG(CAM_CCI, "Iteration: %u read_words %d", j, read_words);
-
-		total_read_words += read_words;
-		while (read_words > 0) {
+		do {
 			val = cam_io_r_mb(base +
 				CCI_I2C_M0_READ_DATA_ADDR + master * 0x100);
 			for (i = 0; (i < 4) &&
 				(index < read_cfg->num_byte); i++) {
 				CAM_DBG(CAM_CCI, "i:%d index:%d", i, index);
 				if (!first_byte) {
-					CAM_DBG(CAM_CCI, "sid 0x%x",
-						val & 0xFF);
+					CAM_DBG(CAM_CCI, "sid 0x%x", val & 0xFF);
 					first_byte++;
 				} else {
-					read_cfg->data[index] =
-						(val  >> (i * 8)) & 0xFF;
-					CAM_DBG(CAM_CCI, "data[%d] 0x%x", index,
-						read_cfg->data[index]);
+					read_cfg->data[index] = (val  >> (i * 8)) & 0xFF;
+					CAM_DBG(CAM_CCI, "data[%d] 0x%x", index, read_cfg->data[index]);
 					index++;
 				}
 			}
-			read_words--;
-		}
-
-		CAM_DBG(CAM_CCI, "Iteraion:%u total_read_words %d",
-			j, total_read_words);
-
-		spin_lock_irqsave(&cci_dev->lock_status, flags);
-		if (cci_dev->irq_status1) {
-			CAM_DBG(CAM_CCI, "clear irq_status1:%x",
-				cci_dev->irq_status1);
-			cam_io_w_mb(cci_dev->irq_status1,
-				base + CCI_IRQ_CLEAR_1_ADDR);
-			cam_io_w_mb(0x1, base + CCI_IRQ_GLOBAL_CLEAR_CMD_ADDR);
-			cci_dev->irq_status1 = 0;
-		}
-		spin_unlock_irqrestore(&cci_dev->lock_status, flags);
-
-		if (total_read_words == exp_words) {
-		   /*
-		    * This wait is for RD_DONE irq, if RD_DONE is
-		    * triggered we will call complete on both threshold
-		    * & read done waits. As part of the threshold wait
-		    * we will be draining the entire buffer out. This
-		    * wait is to compensate for the complete invoked for
-		    * RD_DONE exclusively.
-		    */
-			rem_jiffies = wait_for_completion_timeout(
-			&cci_dev->cci_master_info[master].reset_complete,
-			CCI_TIMEOUT);
-			if (!rem_jiffies) {
-				rc = -ETIMEDOUT;
-				val = cam_io_r_mb(base +
-					CCI_I2C_M0_READ_BUF_LEVEL_ADDR +
-					master * 0x100);
-				CAM_ERR(CAM_CCI,
-					"Failed to receive RD_DONE irq rc = %d FIFO buf_lvl:0x%x",
-					rc, val);
-				#ifdef DUMP_CCI_REGISTERS
-					cam_cci_dump_registers(cci_dev,
-						master, queue);
-				#endif
-					cam_cci_flush_queue(cci_dev, master);
-				goto rel_mutex;
-			}
-			break;
-		}
+		} while (--read_words > 0);
 	}
-
-	CAM_DBG(CAM_CCI, "Burst read successful words_read %d",
-		total_read_words);
 
 rel_mutex:
 	mutex_unlock(&cci_dev->cci_master_info[master].mutex_q[queue]);
@@ -1223,8 +1172,7 @@ static int32_t cam_cci_read(struct v4l2_subdev *sd,
 
 	val = 1 << ((master * 2) + queue);
 	cam_io_w_mb(val, base + CCI_QUEUE_START_ADDR);
-	CAM_DBG(CAM_CCI,
-		"waiting_for_rd_done [exp_words: %d]", exp_words);
+	CAM_DBG(CAM_CCI, "wait_for_completion_timeout");
 
 	rc = wait_for_completion_timeout(
 		&cci_dev->cci_master_info[master].reset_complete, CCI_TIMEOUT);
@@ -1258,7 +1206,7 @@ static int32_t cam_cci_read(struct v4l2_subdev *sd,
 	index = 0;
 	CAM_DBG(CAM_CCI, "index %d num_type %d", index, read_cfg->num_byte);
 	first_byte = 0;
-	while (read_words > 0) {
+	do {
 		val = cam_io_r_mb(base +
 			CCI_I2C_M0_READ_DATA_ADDR + master * 0x100);
 		CAM_DBG(CAM_CCI, "read val 0x%x", val);
@@ -1275,10 +1223,10 @@ static int32_t cam_cci_read(struct v4l2_subdev *sd,
 				index++;
 			}
 		}
-		read_words--;
-	}
+	} while (--read_words > 0);
 rel_mutex:
 	mutex_unlock(&cci_dev->cci_master_info[master].mutex_q[queue]);
+
 	return rc;
 }
 
@@ -1457,34 +1405,23 @@ static int32_t cam_cci_read_bytes(struct v4l2_subdev *sd,
 	}
 
 	read_bytes = read_cfg->num_byte;
-
-	/*
-	 * To avoid any conflicts due to back to back trigger of
-	 * THRESHOLD irq's, we reinit the threshold wait before
-	 * we load the burst read cmd.
-	 */
-	reinit_completion(&cci_dev->cci_master_info[master].th_complete);
-
-	CAM_DBG(CAM_CCI, "Bytes to read %u", read_bytes);
 	do {
-		if (read_bytes >= CCI_I2C_MAX_BYTE_COUNT)
+		if (read_bytes > CCI_I2C_MAX_BYTE_COUNT)
 			read_cfg->num_byte = CCI_I2C_MAX_BYTE_COUNT;
 		else
 			read_cfg->num_byte = read_bytes;
 
-		if (read_cfg->num_byte >= CCI_READ_MAX) {
-			cci_dev->is_burst_read = true;
+		if (read_cfg->num_byte > CCI_READ_MAX)
 			rc = cam_cci_burst_read(sd, c_ctrl);
-		} else {
-			cci_dev->is_burst_read = false;
+		else
 			rc = cam_cci_read(sd, c_ctrl);
-		}
+
 		if (rc) {
 			CAM_ERR(CAM_CCI, "failed to read rc:%d", rc);
 			goto ERROR;
 		}
 
-		if (read_bytes >= CCI_I2C_MAX_BYTE_COUNT) {
+		if (read_bytes > CCI_I2C_MAX_BYTE_COUNT) {
 			read_cfg->addr += (CCI_I2C_MAX_BYTE_COUNT /
 				read_cfg->data_type);
 			read_cfg->data += CCI_I2C_MAX_BYTE_COUNT;
@@ -1495,7 +1432,6 @@ static int32_t cam_cci_read_bytes(struct v4l2_subdev *sd,
 	} while (read_bytes);
 
 ERROR:
-	cci_dev->is_burst_read = false;
 	return rc;
 }
 
@@ -1605,27 +1541,19 @@ int32_t cam_cci_core_cfg(struct v4l2_subdev *sd,
 	int32_t rc = 0;
 	struct cci_device *cci_dev;
 
-	cci_dev = v4l2_get_subdevdata(sd);
-	if (!cci_dev || !cci_ctrl) {
-		CAM_ERR(CAM_CCI, "failed: invalid params %pK %pK",
-			cci_dev, cci_ctrl);
-		rc = -EINVAL;
-		return rc;
-	}
-
 	CAM_DBG(CAM_CCI, "cmd %d", cci_ctrl->cmd);
+	cci_dev = v4l2_get_subdevdata(sd);
+	mutex_lock(&cci_dev->mutex);
 	switch (cci_ctrl->cmd) {
 	case MSM_CCI_INIT:
-		mutex_lock(&cci_dev->init_mutex);
 		rc = cam_cci_init(sd, cci_ctrl);
-		mutex_unlock(&cci_dev->init_mutex);
 		break;
 	case MSM_CCI_RELEASE:
-		mutex_lock(&cci_dev->init_mutex);
 		rc = cam_cci_release(sd);
-		mutex_unlock(&cci_dev->init_mutex);
 		break;
 	case MSM_CCI_I2C_READ:
+		if (cci_dev->cci_state == CCI_STATE_DISABLED)
+			break;
 		rc = cam_cci_read_bytes(sd, cci_ctrl);
 		break;
 	case MSM_CCI_I2C_WRITE:
@@ -1634,6 +1562,8 @@ int32_t cam_cci_core_cfg(struct v4l2_subdev *sd,
 	case MSM_CCI_I2C_WRITE_SYNC:
 	case MSM_CCI_I2C_WRITE_ASYNC:
 	case MSM_CCI_I2C_WRITE_SYNC_BLOCK:
+		if (cci_dev->cci_state == CCI_STATE_DISABLED)
+			break;
 		rc = cam_cci_write(sd, cci_ctrl);
 		break;
 	case MSM_CCI_GPIO_WRITE:
@@ -1647,6 +1577,6 @@ int32_t cam_cci_core_cfg(struct v4l2_subdev *sd,
 	}
 
 	cci_ctrl->status = rc;
-
+	mutex_unlock(&cci_dev->mutex);
 	return rc;
 }

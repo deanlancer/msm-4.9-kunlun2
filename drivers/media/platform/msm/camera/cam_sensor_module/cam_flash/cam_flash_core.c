@@ -470,11 +470,13 @@ static int cam_flash_ops(struct cam_flash_ctrl *flash_ctrl,
 
 				if (flash_data->led_current_ma[i] <=
 					max_current)
-					curr = flash_data->led_current_ma[i];
+					curr = 750;//flash_data->led_current_ma[i];
 				else
-					curr = soc_private->flash_op_current[i];
+					curr = 750;//soc_private->flash_op_current[i];
 
-				CAM_DBG(CAM_PERF, "LED flash_current[%d]: %d",
+                CAM_ERR(CAM_PERF, "debugger:max_current:%d,led_current_ma:%d, flash_op_current:%d",
+                        max_current,flash_data->led_current_ma[i],soc_private->flash_op_current[i]);
+                CAM_ERR(CAM_PERF, "debugger:LED flash_current[%d]: %d",
 					i, curr);
 				cam_res_mgr_led_trigger_event(
 					flash_ctrl->flash_trigger[i],

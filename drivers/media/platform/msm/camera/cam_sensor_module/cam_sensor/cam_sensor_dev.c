@@ -428,6 +428,19 @@ static int __init cam_sensor_driver_init(void)
 	if (rc)
 		CAM_ERR(CAM_SENSOR, "i2c_add_driver failed rc = %d", rc);
 
+	/* Huaqin add for add camera kernel node by zhangpeng at 2018/8/13 start*/
+	#if CAM_MODULE_INFO_CONFIG
+		proc_entry = proc_create(CAM_MODULE_INFO,
+								0664, NULL,
+								&cameraModuleInfo_fops);
+
+		if (NULL == proc_entry) {
+			pr_err("Create proc/cameraModuleInfo failed\n");
+			remove_proc_entry(CAM_MODULE_INFO, NULL);
+		}
+	#endif
+	/* Huaqin add for add camera kernel node by zhangpeng at 2018/8/13 end*/
+
 	return rc;
 }
 
@@ -435,6 +448,13 @@ static void __exit cam_sensor_driver_exit(void)
 {
 	platform_driver_unregister(&cam_sensor_platform_driver);
 	i2c_del_driver(&cam_sensor_driver_i2c);
+	i2c_del_driver(&cam_sensor_driver_i2c);
+
+	/* Huaqin add for add camera kernel node by zhangpeng at 2018/8/13 start*/
+	#if CAM_MODULE_INFO_CONFIG
+	remove_proc_entry(CAM_MODULE_INFO, NULL);
+	#endif
+	/* Huaqin add for add camera kernel node by zhangpeng at 2018/8/13 end*/
 }
 
 module_init(cam_sensor_driver_init);

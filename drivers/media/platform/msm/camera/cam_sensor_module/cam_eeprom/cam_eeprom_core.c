@@ -20,6 +20,17 @@
 #include "cam_common_util.h"
 #include "cam_packet_util.h"
 
+#define EEPROM_POWER_UP_ERROR 1
+#define EEPROM_MAPDATA_ALLCO_ERROR 1<<1
+#define EEPROM_READ_MEMORY_ERROR 1<<2
+#define EEPROM_POWER_DOWN_ERROR 1<<3
+#define EEPROM_PKT_ERROR 1<<4
+#define EEPROM_COPY_USER_ERROR 1<<5
+#define EEPROM_OUT_OF_SIZE_ERROR 1<<6
+#define  EEPROM_HANDLE_ERROR 1<<7
+
+
+unsigned int g_camera_eeprom_status = 0;
 /**
  * cam_eeprom_read_memory() - read map data into buffer
  * @e_ctrl:     eeprom control struct
@@ -28,7 +39,7 @@
  * This function iterates through blocks stored in block->map, reads each
  * region and concatenate them into the pre-allocated block->mapdata
  */
-static int cam_eeprom_read_memory(struct cam_eeprom_ctrl_t *e_ctrl,
+int cam_eeprom_read_memory(struct cam_eeprom_ctrl_t *e_ctrl,
 	struct cam_eeprom_memory_block_t *block)
 {
 	int                                rc = 0;
@@ -64,6 +75,7 @@ static int cam_eeprom_read_memory(struct cam_eeprom_ctrl_t *e_ctrl,
 		if (emap[j].page.valid_size) {
 			i2c_reg_settings.addr_type = emap[j].page.addr_type;
 			i2c_reg_settings.data_type = emap[j].page.data_type;
+			i2c_reg_settings.delay = emap[j].page.delay;//Huaqin add for jd2019 eeprom write delay by zhangpeng at 2018/9/13
 			i2c_reg_settings.size = 1;
 			i2c_reg_array.reg_addr = emap[j].page.addr;
 			i2c_reg_array.reg_data = emap[j].page.data;
@@ -140,6 +152,7 @@ static int cam_eeprom_read_memory(struct cam_eeprom_ctrl_t *e_ctrl,
 			}
 		}
 	}
+	CAM_ERR(CAM_EEPROM, "camera read eeprom success rc = %d", rc);
 	return rc;
 }
 
@@ -275,6 +288,7 @@ int32_t cam_eeprom_parse_read_memory_map(struct device_node *of_node,
 	struct cam_eeprom_soc_private  *soc_private;
 	struct cam_sensor_power_ctrl_t *power_info;
 
+	CAM_ERR(CAM_EEPROM, "huaqin_camera_eeprom read memory map enter");
 	if (!e_ctrl) {
 		CAM_ERR(CAM_EEPROM, "failed: e_ctrl is NULL");
 		return -EINVAL;
@@ -290,6 +304,7 @@ int32_t cam_eeprom_parse_read_memory_map(struct device_node *of_node,
 		return rc;
 	}
 	rc = cam_eeprom_power_up(e_ctrl, power_info);
+	usleep_range(2000, 2000);
 	if (rc) {
 		CAM_ERR(CAM_EEPROM, "failed: eeprom power up rc %d", rc);
 		goto data_mem_free;
@@ -309,6 +324,7 @@ int32_t cam_eeprom_parse_read_memory_map(struct device_node *of_node,
 		goto power_down;
 	}
 
+	usleep_range(20000, 20000);
 	rc = cam_eeprom_power_down(e_ctrl);
 	if (rc)
 		CAM_ERR(CAM_EEPROM, "failed: eeprom power down rc %d", rc);
@@ -783,16 +799,20 @@ static int32_t cam_eeprom_pkt_parse(struct cam_eeprom_ctrl_t *e_ctrl, void *arg)
 	struct cam_eeprom_soc_private  *soc_private =
 		(struct cam_eeprom_soc_private *)e_ctrl->soc_info.soc_private;
 	struct cam_sensor_power_ctrl_t *power_info = &soc_private->power_info;
+	int read_count = 3;
 
 	ioctl_ctrl = (struct cam_control *)arg;
 
 	if (copy_from_user(&dev_config,
 		u64_to_user_ptr(ioctl_ctrl->handle),
-		sizeof(dev_config)))
+		sizeof(dev_config))){
+		g_camera_eeprom_status |= EEPROM_COPY_USER_ERROR;
 		return -EFAULT;
+	}
 	rc = cam_mem_get_cpu_buf(dev_config.packet_handle,
 		&generic_pkt_addr, &pkt_len);
 	if (rc) {
+		g_camera_eeprom_status |= EEPROM_HANDLE_ERROR;
 		CAM_ERR(CAM_EEPROM,
 			"error in converting command Handle Error: %d", rc);
 		return rc;
@@ -802,6 +822,7 @@ static int32_t cam_eeprom_pkt_parse(struct cam_eeprom_ctrl_t *e_ctrl, void *arg)
 	if ((sizeof(struct cam_packet) > pkt_len) ||
 		((size_t)dev_config.offset >= pkt_len -
 		sizeof(struct cam_packet))) {
+		g_camera_eeprom_status |= EEPROM_OUT_OF_SIZE_ERROR;
 		CAM_ERR(CAM_EEPROM,
 			"Inval cam_packet strut size: %zu, len_of_buff: %zu",
 			 sizeof(struct cam_packet), pkt_len);
@@ -838,6 +859,7 @@ static int32_t cam_eeprom_pkt_parse(struct cam_eeprom_ctrl_t *e_ctrl, void *arg)
 		}
 		rc = cam_eeprom_init_pkt_parser(e_ctrl, csl_packet);
 		if (rc) {
+			g_camera_eeprom_status |= EEPROM_PKT_ERROR;
 			CAM_ERR(CAM_EEPROM,
 				"Failed in parsing the pkt");
 			return rc;
@@ -847,27 +869,48 @@ static int32_t cam_eeprom_pkt_parse(struct cam_eeprom_ctrl_t *e_ctrl, void *arg)
 			vzalloc(e_ctrl->cal_data.num_data);
 		if (!e_ctrl->cal_data.mapdata) {
 			rc = -ENOMEM;
+			g_camera_eeprom_status |= EEPROM_MAPDATA_ALLCO_ERROR;
 			CAM_ERR(CAM_EEPROM, "failed");
 			goto error;
 		}
 
 		rc = cam_eeprom_power_up(e_ctrl,
 			&soc_private->power_info);
+		usleep_range(2000, 2000);
 		if (rc) {
+			g_camera_eeprom_status |= EEPROM_POWER_UP_ERROR;
 			CAM_ERR(CAM_EEPROM, "failed rc %d", rc);
 			goto memdata_free;
 		}
 
+		do{
 		e_ctrl->cam_eeprom_state = CAM_EEPROM_CONFIG;
 		rc = cam_eeprom_read_memory(e_ctrl, &e_ctrl->cal_data);
-		if (rc) {
-			CAM_ERR(CAM_EEPROM,
-				"read_eeprom_memory failed");
+			if(rc == 0){
+				CAM_DBG(CAM_EEPROM, "read eeprom memory success");
+				break;
+			}else{
+				g_camera_eeprom_status |= EEPROM_READ_MEMORY_ERROR;
+				CAM_ERR(CAM_EEPROM, "read_eeprom_memory failed %d", rc);
+				cam_eeprom_power_down(e_ctrl);
+				msleep(10);
+				cam_eeprom_power_up(e_ctrl, &soc_private->power_info);
+				msleep(10);
+			}
+			read_count--;
+		}while(read_count > 0);
+		if(rc != 0){
+			CAM_ERR(CAM_EEPROM, "read_eeprom_memory failed %d", rc);
+			//BUG_ON(rc);
 			goto power_down;
 		}
 
 		rc = cam_eeprom_get_cal_data(e_ctrl, csl_packet);
+		usleep_range(20000, 20000);
 		rc = cam_eeprom_power_down(e_ctrl);
+		if (rc){
+			g_camera_eeprom_status |= EEPROM_POWER_DOWN_ERROR;
+		}
 		e_ctrl->cam_eeprom_state = CAM_EEPROM_ACQUIRE;
 		vfree(e_ctrl->cal_data.mapdata);
 		vfree(e_ctrl->cal_data.map);
@@ -875,8 +918,6 @@ static int32_t cam_eeprom_pkt_parse(struct cam_eeprom_ctrl_t *e_ctrl, void *arg)
 		kfree(power_info->power_down_setting);
 		power_info->power_setting = NULL;
 		power_info->power_down_setting = NULL;
-		power_info->power_setting_size = 0;
-		power_info->power_down_setting_size = 0;
 		e_ctrl->cal_data.num_data = 0;
 		e_ctrl->cal_data.num_map = 0;
 		break;
@@ -930,8 +971,6 @@ void cam_eeprom_shutdown(struct cam_eeprom_ctrl_t *e_ctrl)
 		kfree(power_info->power_down_setting);
 		power_info->power_setting = NULL;
 		power_info->power_down_setting = NULL;
-		power_info->power_setting_size = 0;
-		power_info->power_down_setting_size = 0;
 	}
 
 	e_ctrl->cam_eeprom_state = CAM_EEPROM_INIT;
@@ -964,6 +1003,7 @@ int32_t cam_eeprom_driver_cmd(struct cam_eeprom_ctrl_t *e_ctrl, void *arg)
 	mutex_lock(&(e_ctrl->eeprom_mutex));
 	switch (cmd->op_code) {
 	case CAM_QUERY_CAP:
+		CAM_ERR(CAM_EEPROM, "HQ_EEPROM_CAM_QUERY_CAP");
 		eeprom_cap.slot_info = e_ctrl->soc_info.index;
 		if (e_ctrl->userspace_probe == false)
 			eeprom_cap.eeprom_kernel_probe = true;
@@ -977,9 +1017,10 @@ int32_t cam_eeprom_driver_cmd(struct cam_eeprom_ctrl_t *e_ctrl, void *arg)
 			rc = -EFAULT;
 			goto release_mutex;
 		}
-		CAM_DBG(CAM_EEPROM, "eeprom_cap: ID: %d", eeprom_cap.slot_info);
+		CAM_ERR(CAM_EEPROM, "eeprom_cap: ID: %d", eeprom_cap.slot_info);
 		break;
 	case CAM_ACQUIRE_DEV:
+		CAM_ERR(CAM_EEPROM, "HQ_EEPROM_CAM_ACQUIRE_DEV");
 		rc = cam_eeprom_get_dev_handle(e_ctrl, arg);
 		if (rc) {
 			CAM_ERR(CAM_EEPROM, "Failed to acquire dev");
@@ -988,6 +1029,7 @@ int32_t cam_eeprom_driver_cmd(struct cam_eeprom_ctrl_t *e_ctrl, void *arg)
 		e_ctrl->cam_eeprom_state = CAM_EEPROM_ACQUIRE;
 		break;
 	case CAM_RELEASE_DEV:
+		CAM_ERR(CAM_EEPROM, "HQ_EEPROM_CAM_RELEASE_DEV");
 		if (e_ctrl->cam_eeprom_state != CAM_EEPROM_ACQUIRE) {
 			rc = -EINVAL;
 			CAM_WARN(CAM_EEPROM,
@@ -1014,6 +1056,7 @@ int32_t cam_eeprom_driver_cmd(struct cam_eeprom_ctrl_t *e_ctrl, void *arg)
 		e_ctrl->cam_eeprom_state = CAM_EEPROM_INIT;
 		break;
 	case CAM_CONFIG_DEV:
+	CAM_ERR(CAM_EEPROM, "HQ_EEPROM_CAM_CONFIG_DEV");
 		rc = cam_eeprom_pkt_parse(e_ctrl, arg);
 		if (rc) {
 			CAM_ERR(CAM_EEPROM, "Failed in eeprom pkt Parsing");
