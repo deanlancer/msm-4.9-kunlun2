@@ -15,7 +15,25 @@
 #include "cam_eeprom_soc.h"
 #include "cam_eeprom_core.h"
 #include "cam_debug_util.h"
-
+/* Huaqin add for biaoding by chenjun at 2018/10/08 start*/
+#ifdef huaqin_calibration//chenjun biaoding
+#include "cam_sensor_cmn_header.h"
+#include <linux/fs.h>
+#define RECALIBRATION_FILE_NAME_MASTER "/persist/recalibration_16b10_8856.bin"
+#define RECALIBRATION_FILE_NAME_SLAVE "/persist/recalibration_16b10_s5k5e9.bin"
+#define  EEPROM_ONE_BURST_SIZE   8
+#define  FILE_DATA_SIZE  2048
+#define  START_REGADDR_M 0xC6	//should modify by module
+#define  SLAVE_ADDR_M 0xA0 >> 1	//should modify by module
+#define  START_REGADDR_S 0x13A5	//should modify by module
+#define  SLAVE_ADDR_S 0xA0 >> 1	//should modify by module
+//uint8_t *buffer1;
+//uint8_t *buffer;
+#ifdef CHECK_SUM_CRC
+char *data_count;
+#endif
+#endif
+/* Huaqin add for biaoding by chenjun at 2018/10/08 end*/
 static long cam_eeprom_subdev_ioctl(struct v4l2_subdev *sd,
 	unsigned int cmd, void *arg)
 {
@@ -154,7 +172,373 @@ static int cam_eeprom_init_subdev(struct cam_eeprom_ctrl_t *e_ctrl)
 
 	return rc;
 }
+/* Huaqin add for biaoding by chenjun at 2018/10/08 start*/
+#ifdef huaqin_calibration
+int recalibration_file_rw(const char *fname, void *buf, loff_t offset, unsigned long len) 
+{
+	struct file *filep;
+	int ret;
 
+	filep = filp_open(fname, O_RDWR | O_CREAT, 0666);
+	if(IS_ERR(filep)) {
+		printk("\r\n chenjun=>RST: %s error\n", __func__);
+		return -1;
+	}
+	ret = kernel_read(filep, offset, buf, len);
+	if (ret < 0) {
+		return ret;
+	}
+
+	filp_close(filep, NULL);
+
+	return 0;
+}
+
+#ifdef CHECK_SUM_CRC
+/*check_sum_CRC*/
+static char *MakeCRC(void)
+{
+	static char Res[17];                                 // CRC Result
+	char CRC[16];
+	int  i;
+	char DoInvert;
+	for (i=0; i<16; ++i)  CRC[i] = 0;                    // Init before calculation
+
+	for (i=0; i<((int)strlen(data_count)); ++i)
+	{
+		DoInvert = ('1'==data_count[i]) ^ CRC[15];         // XOR required?
+
+		CRC[15] = CRC[14] ^ DoInvert;
+		CRC[14] = CRC[13];
+		CRC[13] = CRC[12];
+		CRC[12] = CRC[11];
+		CRC[11] = CRC[10];
+		CRC[10] = CRC[9];
+		CRC[9] = CRC[8];
+		CRC[8] = CRC[7];
+		CRC[7] = CRC[6];
+		CRC[6] = CRC[5];
+		CRC[5] = CRC[4];
+		CRC[4] = CRC[3];
+		CRC[3] = CRC[2];
+		CRC[2] = CRC[1] ^ DoInvert;
+		CRC[1] = CRC[0];
+		CRC[0] = DoInvert;
+	}
+
+	for (i=0; i<16; ++i)  Res[15-i] = CRC[i] ? '1' : '0'; // Convert binary to ASCII
+	Res[16] = 0;                                         // Set string terminator
+
+	return(Res);
+}
+static int GetCRCChecksum(int dataCount,uint8_t  *buffer)
+{
+	int checksum=0;
+	//char *temp;
+	char *Result;
+	//char data_count[dataCount*8+1];
+	int k = 0;
+	int i,j;
+	int res;
+	pr_err("GetCRCChecksum 0");
+	//msleep(1000);
+	data_count=vmalloc(2048*8+1);
+	//temp = data_count;
+	pr_err("GetCRCChecksum 1");
+	//msleep(3000);
+	for(j = 0;j < dataCount ;j++)
+	{
+		char tt[9] = {0};
+		for ( i = 0; i < 8; i++)
+		{
+			tt[i]  = ((((*(buffer +j)) >>(7-i))&1)==1)?'1':'0';
+			*(data_count+k) = tt[i];
+			k++;
+		}
+	}
+	*(data_count+dataCount*8) = 0;
+	pr_err("GetCRCChecksum 2");
+	//msleep(3000);
+	Result = MakeCRC();
+	pr_err("GetCRCChecksum 3");
+	//msleep(3000);
+	res=0;
+	for (i=0;i<16;i++)
+		res+=(Result[i]-48)<<(15-i);
+	checksum=res;
+	return checksum;
+}
+#endif
+
+static ssize_t read_eeprom_show(struct device *dev,
+				     struct device_attribute *attr,
+				     const char *buf, size_t count)
+{
+	struct i2c_client *client = to_i2c_client(dev);
+	struct cam_eeprom_ctrl_t *eeprom = i2c_get_clientdata(client);
+	int error;
+	int read_eeprom_data;
+	//int read_eeprom_data1;
+	uint32_t i;
+	
+	eeprom->io_master_info.cci_client->cci_i2c_master = 0;
+	eeprom->io_master_info.cci_client->sid = SLAVE_ADDR_M;
+	eeprom->io_master_info.cci_client->i2c_freq_mode = 1;
+	
+	error = camera_io_init(&(eeprom->io_master_info));
+	if (error) {
+		CAM_ERR(CAM_EEPROM, "\r\n chenjun=>read_eeprom_store cci_init failed");
+		return -EINVAL;
+	}
+	/*
+	for(i=0;i<100;i++)
+	{
+	error = cam_cci_i2c_read(eeprom->io_master_info.cci_client,
+		0xc6+i, &read_eeprom_data,
+		CAMERA_SENSOR_I2C_TYPE_WORD,
+		CAMERA_SENSOR_I2C_TYPE_BYTE);
+	CAM_ERR(CAM_EEPROM, "\r\n chenjun=>read_eeprom_store read_eeprom_data=0x%x",read_eeprom_data);
+	}*/
+	for(i=0;i<2;i++)
+	{
+	error = cam_cci_i2c_read(eeprom->io_master_info.cci_client,
+		0x8c6+i, &read_eeprom_data,
+		CAMERA_SENSOR_I2C_TYPE_WORD,
+		CAMERA_SENSOR_I2C_TYPE_BYTE);
+	CAM_ERR(CAM_EEPROM, "\r\n chenjun=>check_sum_crc_master=0x%x",read_eeprom_data);
+	error = cam_cci_i2c_read(eeprom->io_master_info.cci_client,
+		0x1BA5+i, &read_eeprom_data,
+		CAMERA_SENSOR_I2C_TYPE_WORD,
+		CAMERA_SENSOR_I2C_TYPE_BYTE);
+	CAM_ERR(CAM_EEPROM, "\r\n chenjun=>check_sum_crc_slave=0x%x",read_eeprom_data);
+	}
+	if(error)
+	{
+		CAM_ERR(CAM_EEPROM, "\r\n chenjun=>read_eeprom_store error");
+	}
+	else
+	{
+		CAM_ERR(CAM_EEPROM, "\r\n chenjun=>read_eeprom_store ok");
+	}
+	
+	return count;
+}
+
+static DEVICE_ATTR(read_eeprom, 0664, NULL, read_eeprom_show);
+static ssize_t write_eeprom_store_master(struct device *dev,
+				     struct device_attribute *attr,
+				     const char *buf, size_t count)
+{
+	struct i2c_client *client = to_i2c_client(dev);
+	struct cam_eeprom_ctrl_t *eeprom = i2c_get_clientdata(client);
+	int error;
+	uint32_t i;
+#ifdef CHECK_SUM_CRC
+	uint32_t crc_check_sum;
+#endif
+	uint32_t reg_addr=START_REGADDR_M;
+	uint8_t *buffer_master;
+	struct cam_sensor_i2c_reg_setting i2c_reg_setting;
+	struct cam_sensor_i2c_reg_array   reg_write_setting[EEPROM_ONE_BURST_SIZE];
+
+	buffer_master = vmalloc(FILE_DATA_SIZE);
+	recalibration_file_rw(RECALIBRATION_FILE_NAME_MASTER,buffer_master,0,FILE_DATA_SIZE);
+	usleep_range(5000,5000);
+	eeprom->io_master_info.cci_client->cci_i2c_master = 0;
+	eeprom->io_master_info.cci_client->sid = SLAVE_ADDR_M;
+	eeprom->io_master_info.cci_client->i2c_freq_mode = 1;
+	eeprom->io_master_info.master_type = CCI_MASTER;
+
+	error = camera_io_init(&(eeprom->io_master_info));
+	if (error) {
+		CAM_ERR(CAM_EEPROM, "\r\n chenjun=>write_eeprom_store cci_init failed");
+		return -EINVAL;
+	}
+	i2c_reg_setting.addr_type = CAMERA_SENSOR_I2C_TYPE_WORD;
+	i2c_reg_setting.data_type = CAMERA_SENSOR_I2C_TYPE_BYTE;
+	i2c_reg_setting.delay = 0;
+	i2c_reg_setting.reg_setting = reg_write_setting;
+	i2c_reg_setting.size = 1;
+	/*close eeprom write protect*/
+	i2c_reg_setting.reg_setting[0].reg_addr = 0x8000;
+	i2c_reg_setting.reg_setting[0].reg_data =  0x0;
+	i2c_reg_setting.reg_setting[0].delay  = 0;
+	i2c_reg_setting.reg_setting[0].data_mask =0;
+	error = camera_io_dev_write(&(eeprom->io_master_info), &i2c_reg_setting);
+	if(error <0){
+	CAM_ERR(CAM_EEPROM, "\r\n chenjun  guanbi baohu %s: Failed :%d",__func__,error);
+	}
+	usleep_range(5000,5000);
+	for(i = 0 ; i < FILE_DATA_SIZE; i++){
+		i2c_reg_setting.reg_setting[0].reg_addr = reg_addr++;
+		i2c_reg_setting.reg_setting[0].reg_data = buffer_master[i];
+		i2c_reg_setting.reg_setting[0].delay  = 0;
+		i2c_reg_setting.reg_setting[0].data_mask =0;
+
+		error = camera_io_dev_write(&(eeprom->io_master_info), &i2c_reg_setting);
+		if(error <0){
+		CAM_ERR(CAM_EEPROM, "\r\n chenjun %s: Failed :%d",__func__,error);
+		}
+
+		usleep_range(5000,5000);;//delay 
+	}
+	
+#ifdef CHECK_SUM_CRC
+	//add crc_check_sum
+	//crc_check_sum=0xFFFF;
+	crc_check_sum=GetCRCChecksum(2048,buffer_master);
+	CAM_ERR(CAM_EEPROM, "\r\n GetCRCChecksum  Failed :%d",crc_check_sum);	
+	i2c_reg_setting.reg_setting[0].reg_addr = 0x08C6;
+	i2c_reg_setting.reg_setting[0].reg_data = (uint16_t)((crc_check_sum&0xFF00)>>8);
+	i2c_reg_setting.reg_setting[0].delay  = 0;
+	i2c_reg_setting.reg_setting[0].data_mask =0;
+	error = camera_io_dev_write(&(eeprom->io_master_info), &i2c_reg_setting);
+	if(error <0){
+	CAM_ERR(CAM_EEPROM, "\r\n chenjun %s: Failed :%d",__func__,error);
+	}
+	usleep_range(5000,5000);
+	i2c_reg_setting.reg_setting[0].reg_addr = 0x08C7;
+	i2c_reg_setting.reg_setting[0].reg_data = (uint16_t)(crc_check_sum&0x00FF);
+	i2c_reg_setting.reg_setting[0].delay  = 0;
+	i2c_reg_setting.reg_setting[0].data_mask =0;
+	error = camera_io_dev_write(&(eeprom->io_master_info), &i2c_reg_setting);
+	if(error <0){
+	CAM_ERR(CAM_EEPROM, "\r\n chenjun %s: Failed :%d",__func__,error);
+	}
+	usleep_range(5000,5000);
+	pr_err(" crc_check_sum =%d",crc_check_sum);
+#endif
+	
+	/*open eeprom write protect*/
+	i2c_reg_setting.reg_setting[0].reg_addr = 0x8000;
+	i2c_reg_setting.reg_setting[0].reg_data =  0x0E;
+	i2c_reg_setting.reg_setting[0].delay  = 0;
+	i2c_reg_setting.reg_setting[0].data_mask =0;
+	error = camera_io_dev_write(&(eeprom->io_master_info), &i2c_reg_setting);
+	if(error <0){
+	CAM_ERR(CAM_EEPROM, "\r\n chenjun  dakai baohu %s: Failed :%d",__func__,error);
+	}
+	usleep_range(5000,5000);
+	vfree(buffer_master);
+	return count;
+}
+
+static DEVICE_ATTR(write_eeprom_master, 0664, NULL, write_eeprom_store_master);
+static ssize_t write_eeprom_store_slave(struct device *dev,
+				     struct device_attribute *attr,
+				     const char *buf, size_t count)
+{
+	struct i2c_client *client = to_i2c_client(dev);
+	struct cam_eeprom_ctrl_t *eeprom = i2c_get_clientdata(client);
+	int error;
+	uint32_t i;
+	//uint32_t k=0;
+#ifdef CHECK_SUM_CRC
+	uint32_t crc_check_sum;
+#endif
+	uint32_t reg_addr=START_REGADDR_S;
+	uint8_t *buffer_slave;
+	struct cam_sensor_i2c_reg_setting i2c_reg_setting;
+	struct cam_sensor_i2c_reg_array   reg_write_setting[EEPROM_ONE_BURST_SIZE];
+	
+	CAM_ERR(CAM_EEPROM, "\r\n chenjun=>write_eeprom_store");
+	buffer_slave = vmalloc(FILE_DATA_SIZE);
+	recalibration_file_rw(RECALIBRATION_FILE_NAME_SLAVE,buffer_slave,0,FILE_DATA_SIZE);
+	usleep_range(5000,5000);
+	eeprom->io_master_info.cci_client->cci_i2c_master = 0;
+	eeprom->io_master_info.cci_client->sid = SLAVE_ADDR_S;
+	eeprom->io_master_info.cci_client->i2c_freq_mode = 1;
+	eeprom->io_master_info.master_type = CCI_MASTER;
+	
+	error = camera_io_init(&(eeprom->io_master_info));
+	if (error) {
+		CAM_ERR(CAM_EEPROM, "\r\n chenjun=>write_eeprom_store cci_init failed");
+		return -EINVAL;
+	}
+	i2c_reg_setting.addr_type = CAMERA_SENSOR_I2C_TYPE_WORD;
+	i2c_reg_setting.data_type = CAMERA_SENSOR_I2C_TYPE_BYTE;
+	i2c_reg_setting.delay = 0;
+	i2c_reg_setting.reg_setting = reg_write_setting;
+	i2c_reg_setting.size =1 ;
+
+	/*close eeprom write protect*/
+	i2c_reg_setting.reg_setting[0].reg_addr = 0x8000;
+	i2c_reg_setting.reg_setting[0].reg_data =  0x0;//buffer[i];
+	i2c_reg_setting.reg_setting[0].delay  = 0;
+	i2c_reg_setting.reg_setting[0].data_mask =0;
+	error = camera_io_dev_write(&(eeprom->io_master_info), &i2c_reg_setting);
+	if(error <0){
+	CAM_ERR(CAM_EEPROM, "\r\n chenjun  guanbi baohu %s: Failed :%d",__func__,error);
+	}
+	usleep_range(5000,5000);
+
+	for(i = 0 ; i < FILE_DATA_SIZE; i++){
+		i2c_reg_setting.reg_setting[0].reg_addr = reg_addr++;
+		i2c_reg_setting.reg_setting[0].reg_data = buffer_slave[i];
+		i2c_reg_setting.reg_setting[0].delay  = 0;
+		i2c_reg_setting.reg_setting[0].data_mask =0;
+
+		error = camera_io_dev_write(&(eeprom->io_master_info), &i2c_reg_setting);
+		if(error <0){
+		CAM_ERR(CAM_EEPROM, "\r\n chenjun %s: Failed :%d",__func__,error);
+		}
+
+		usleep_range(5000,5000);;//delay 
+	}
+#ifdef CHECK_SUM_CRC
+	//add crc_check_sum
+		//crc_check_sum=0xFFFF;
+	crc_check_sum=GetCRCChecksum(2048,buffer_slave);
+	CAM_ERR(CAM_EEPROM, "\r\n GetCRCChecksum  Failed :%d",crc_check_sum);
+	i2c_reg_setting.reg_setting[0].reg_addr = 0x1BA5;
+	i2c_reg_setting.reg_setting[0].reg_data = (uint16_t)((crc_check_sum&0xFF00)>>8);
+	i2c_reg_setting.reg_setting[0].delay  = 0;
+	i2c_reg_setting.reg_setting[0].data_mask =0;
+	error = camera_io_dev_write(&(eeprom->io_master_info), &i2c_reg_setting);
+	if(error <0){
+	CAM_ERR(CAM_EEPROM, "\r\n chenjun %s: Failed :%d",__func__,error);
+	}
+	usleep_range(5000,5000);
+	i2c_reg_setting.reg_setting[0].reg_addr = 0x1BA6;
+	i2c_reg_setting.reg_setting[0].reg_data = (uint16_t)(crc_check_sum&0x00FF);
+	i2c_reg_setting.reg_setting[0].delay  = 0;
+	i2c_reg_setting.reg_setting[0].data_mask =0;
+	error = camera_io_dev_write(&(eeprom->io_master_info), &i2c_reg_setting);
+	if(error <0){
+	CAM_ERR(CAM_EEPROM, "\r\n chenjun %s: Failed :%d",__func__,error);
+	}
+	usleep_range(5000,5000);
+	pr_err(" crc_check_sum =%d",crc_check_sum);
+#endif
+	
+	/*open eeprom write protect*/
+	i2c_reg_setting.reg_setting[0].reg_addr = 0x8000;
+	i2c_reg_setting.reg_setting[0].reg_data =  0x0E;
+	i2c_reg_setting.reg_setting[0].delay  = 0;
+	i2c_reg_setting.reg_setting[0].data_mask =0;
+	error = camera_io_dev_write(&(eeprom->io_master_info), &i2c_reg_setting);
+	if(error <0){
+	CAM_ERR(CAM_EEPROM, "\r\n chenjun  dakai baohu %s: Failed :%d",__func__,error);
+	}
+	usleep_range(5000,5000);
+	vfree(buffer_slave);
+	return count;
+}
+
+static DEVICE_ATTR(write_eeprom_slave, 0664, NULL, write_eeprom_store_slave);
+
+static struct attribute *eeprom_attrs[] = {
+	&dev_attr_read_eeprom.attr,
+	&dev_attr_write_eeprom_master.attr,
+	&dev_attr_write_eeprom_slave.attr,
+	NULL
+};
+
+static const struct attribute_group eeprom_attr_group = {
+	.attrs = eeprom_attrs,
+};
+#endif
+/* Huaqin add for biaoding by chenjun at 2018/10/08 end*/
 static int cam_eeprom_i2c_driver_probe(struct i2c_client *client,
 	 const struct i2c_device_id *id)
 {
@@ -464,7 +848,16 @@ static int32_t cam_eeprom_platform_driver_probe(
 	v4l2_set_subdevdata(&e_ctrl->v4l2_dev_str.sd, e_ctrl);
 
 	e_ctrl->cam_eeprom_state = CAM_EEPROM_INIT;
-
+/* Huaqin add for biaoding by chenjun at 2018/10/08 start*/
+#ifdef huaqin_calibration
+	rc = sysfs_create_group(&pdev->dev.kobj, &eeprom_attr_group);
+	if (rc) {
+		CAM_ERR(CAM_EEPROM, "\r\n chenjun Failure create eeprom sysfs group , error: %d\n",
+			rc);
+		goto free_soc;
+	}
+#endif
+/* Huaqin add for biaoding by chenjun at 2018/10/08 end*/
 	return rc;
 free_soc:
 	kfree(soc_private);

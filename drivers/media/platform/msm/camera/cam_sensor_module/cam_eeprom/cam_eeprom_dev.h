@@ -37,7 +37,10 @@
 #define MSM_EEPROM_MEMORY_MAP_MAX_SIZE         80
 #define MSM_EEPROM_MAX_MEM_MAP_CNT             8
 #define MSM_EEPROM_MEM_MAP_PROPERTIES_CNT      8
-
+/* Huaqin add for biaoding by chenjun at 2018/10/08 start*/
+#define huaqin_calibration
+//#define CHECK_SUM_CRC
+/* Huaqin add for biaoding by chenjun at 2018/10/08 end*/
 enum cam_eeprom_state {
 	CAM_EEPROM_INIT,
 	CAM_EEPROM_ACQUIRE,

@@ -156,7 +156,7 @@ int32_t get_CameName_and_EfuseId(struct cam_sensor_ctrl_t *s_ctrl)
         
         case SENSER_ID_s5k3p9: {
             CAM_DBG(CAM_SENSOR," case SENSER_ID_s5k3p9 ");
-            strcpy(front_cam_name,"oof_s5k3p9");
+            strcpy(front_cam_name,"sunny_s5k3p9");
             get_efuse_id_s5k(s_ctrl, front_cam_efuse_id);
         }
         break;
@@ -169,8 +169,8 @@ int32_t get_CameName_and_EfuseId(struct cam_sensor_ctrl_t *s_ctrl)
         break;
         
         case SENSER_ID_ov16e10: {
-            CAM_DBG(CAM_SENSOR," case SENSER_ID_ov16e10 ");
-            strcpy(back_cam_name,"qtech_ov16e10");
+            CAM_DBG(CAM_SENSOR," case SENSER_ID_ov16b10 ");
+            strcpy(back_cam_name,"qtech_ov16b10");
             get_efuse_id_ov(s_ctrl, back_cam_efuse_id);
         }
         break;

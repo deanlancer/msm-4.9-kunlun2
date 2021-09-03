@@ -18,6 +18,10 @@
 #define CAM_SENSOR_PINCTRL_STATE_SLEEP "cam_suspend"
 #define CAM_SENSOR_PINCTRL_STATE_DEFAULT "cam_default"
 
+//LENOVO_CUSTOM 2019-01-04 start
+#define CAM_SENSOR_REGSETTING_MAXCOUNT 500
+//LENOVO_CUSTOM 2019-01-04 end
+
 #define VALIDATE_VOLTAGE(min, max, config_val) ((config_val) && \
 	(config_val >= min) && (config_val <= max))
 
@@ -160,6 +164,54 @@ int32_t cam_sensor_handle_random_write(
 	struct i2c_settings_list  *i2c_list;
 	int32_t rc = 0, cnt;
 
+//LENOVO_CUSTOM 2019-01-04 start
+    CAM_DBG(CAM_SENSOR, "total count %d", cam_cmd_i2c_random_wr->header.count);
+    if (cam_cmd_i2c_random_wr->header.count > CAM_SENSOR_REGSETTING_MAXCOUNT) {
+        uint32_t left_count = cam_cmd_i2c_random_wr->header.count;
+        uint32_t write_count = 0;
+        bool     is_last_group = false;
+        uint32_t reg_offset = 0;
+        while (left_count > 0) {
+            if (left_count > CAM_SENSOR_REGSETTING_MAXCOUNT) {
+                write_count = CAM_SENSOR_REGSETTING_MAXCOUNT;
+            } else {
+                write_count = left_count;
+                is_last_group = true;
+            }
+
+            CAM_DBG(CAM_SENSOR, "write count %d, size of reg arry %lu",
+                    write_count, (sizeof(struct cam_sensor_i2c_reg_array) * write_count));
+            i2c_list = cam_sensor_get_i2c_ptr(i2c_reg_settings, write_count);
+            if (i2c_list == NULL ||
+                    i2c_list->i2c_settings.reg_setting == NULL) {
+                CAM_ERR(CAM_SENSOR, "Failed in allocating i2c_list");
+                return -ENOMEM;
+            }
+
+            i2c_list->op_code = CAM_SENSOR_I2C_WRITE_RANDOM;
+            i2c_list->i2c_settings.addr_type =
+                cam_cmd_i2c_random_wr->header.addr_type;
+            i2c_list->i2c_settings.data_type =
+                cam_cmd_i2c_random_wr->header.data_type;
+
+            for (cnt = 0; cnt < write_count; cnt++) {
+                i2c_list->i2c_settings.reg_setting[cnt].reg_addr =
+                    cam_cmd_i2c_random_wr->random_wr_payload[cnt + reg_offset].reg_addr;
+                i2c_list->i2c_settings.reg_setting[cnt].reg_data =
+                    cam_cmd_i2c_random_wr->random_wr_payload[cnt + reg_offset].reg_data;
+                i2c_list->i2c_settings.reg_setting[cnt].data_mask = 0;
+            }
+            reg_offset = reg_offset + write_count;
+            left_count = left_count - write_count;
+            CAM_DBG(CAM_SENSOR, "left count %u", left_count);
+
+            if (is_last_group == true) {
+                *offset = cnt;
+                *list = &(i2c_list->list);
+            }
+        }
+    } else {
+//LENOVO_CUSTOM 2019-01-04 end
 	i2c_list = cam_sensor_get_i2c_ptr(i2c_reg_settings,
 		cam_cmd_i2c_random_wr->header.count);
 	if (i2c_list == NULL ||
@@ -168,9 +220,6 @@ int32_t cam_sensor_handle_random_write(
 		return -ENOMEM;
 	}
 
-	*cmd_length_in_bytes = (sizeof(struct i2c_rdwr_header) +
-		sizeof(struct i2c_random_wr_payload) *
-		(cam_cmd_i2c_random_wr->header.count));
 	i2c_list->op_code = CAM_SENSOR_I2C_WRITE_RANDOM;
 	i2c_list->i2c_settings.addr_type =
 		cam_cmd_i2c_random_wr->header.addr_type;
@@ -187,6 +236,13 @@ int32_t cam_sensor_handle_random_write(
 	}
 	*offset = cnt;
 	*list = &(i2c_list->list);
+//LENOVO_CUSTOM 2019-01-04 start
+    }
+//LENOVO_CUSTOM 2019-01-04 end
+
+    *cmd_length_in_bytes = (sizeof(struct i2c_rdwr_header) +
+        sizeof(struct i2c_random_wr_payload) *
+        (cam_cmd_i2c_random_wr->header.count));
 
 	return rc;
 }

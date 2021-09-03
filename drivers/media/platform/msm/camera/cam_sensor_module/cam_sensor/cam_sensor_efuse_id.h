@@ -11,7 +11,7 @@
 
 
 #define SENSER_ID_s5k3p9   0x3109
-#define SENSER_ID_ov16e10  0x1645
+#define SENSER_ID_ov16e10  0x1642
 #define SENSER_ID_ov8856   0x885A
 #define SENSER_ID_s5k5e9   0x559B
 
