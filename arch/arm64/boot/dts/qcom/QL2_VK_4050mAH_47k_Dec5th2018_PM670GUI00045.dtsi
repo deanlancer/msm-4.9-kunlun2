@@ -26,7 +26,7 @@ qcom,QL2_VK_4050mAH_47k_Dec5th2018_PM670GUI00045 {
 							4000001  4300000  2000000
 							4300001  4400000  1800000>;
 	
-	qcom,battery-type = "QL2_VK_4050mAH_47k_PM670";
+	qcom,battery-type = "QL2-VK 47k 4050mAH";
 	qcom,checksum = <0x5A69>;
 	qcom,gui-version = "PM660GUI - 0.0.0.45";
 	/* Tweak SOC curve to be more linear and monotonic */
