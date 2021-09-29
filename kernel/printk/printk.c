@@ -2791,7 +2791,6 @@ EXPORT_SYMBOL(unregister_console);
 static int __init printk_late_init(void)
 {
 	struct console *con;
-	int ret;
 
 	for_each_console(con) {
 		if (!keep_bootcon && con->flags & CON_BOOT) {
@@ -2807,6 +2806,8 @@ static int __init printk_late_init(void)
 		}
 	}
 #ifdef CONFIG_CONSOLE_FLUSH_ON_HOTPLUG
+	int ret;
+	
 	ret = cpuhp_setup_state_nocalls(CPUHP_PRINTK_DEAD, "printk:dead", NULL,
 					console_cpu_notify);
 	WARN_ON(ret < 0);
