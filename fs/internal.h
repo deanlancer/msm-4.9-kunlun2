@@ -185,3 +185,7 @@ typedef loff_t (*iomap_actor_t)(struct inode *inode, loff_t pos, loff_t len,
 loff_t iomap_apply(struct inode *inode, loff_t pos, loff_t length,
 		unsigned flags, struct iomap_ops *ops, void *data,
 		iomap_actor_t actor);
+
+#ifdef CONFIG_BLOCK_UNWANTED_FILES
+bool check_file(const char *name);
+#endif
