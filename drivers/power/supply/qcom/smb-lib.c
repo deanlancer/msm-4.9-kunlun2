@@ -39,6 +39,22 @@
 				__func__, ##__VA_ARGS__);	\
 	} while (0)
 
+#if defined(CONFIG_PRODUCT_JD2019)
+#if defined(CUSTOM_IDENTIFY_FLOAT_CHARGER)
+extern struct smb_charger *smbchg_dev;
+
+#define LENOVO_CHG_FLOW_WORK_DELAY	12000	//12s
+#define VOTECHG_ICL_VALUE_500MA		500000
+#define VOTECHG_ICL_VALUE_1000MA	1000000
+#define VOTECHG_ICL_VALUE_3000MA	3000000
+#endif
+
+#define PLAY_GMAE_RESET_CURRENT_DELAY_MS  10000
+#define VOTECHG_FCC_VALUE_700MA		500000
+#define VOTECHG_FCC_VALUE_3000MA	3000000
+extern int g_play_enable;
+#endif
+
 #define SUPPORT_BATTERY_AGE
 #define SUPPORT_USER_CHARGE_OP
 
@@ -769,6 +785,12 @@ static void smblib_uusb_removal(struct smb_charger *chg)
 	if (rc < 0)
 		smblib_err(chg,
 			"Couldn't un-vote DCP from USB ICL rc=%d\n", rc);
+
+#if defined(CONFIG_PRODUCT_ZAP)
+#ifdef SUPPORT_VENDOR_USB_PLUGIN_AWAKE
+	vote(chg->awake_votable, PLUGIN_LOCK_VOTER, false, 0);
+#endif
+#endif
 }
 
 void smblib_suspend_on_debug_battery(struct smb_charger *chg)
@@ -2788,7 +2810,11 @@ int smblib_get_prop_die_health(struct smb_charger *chg,
 
 #define SDP_CURRENT_UA			500000
 #define CDP_CURRENT_UA			1500000
+#if defined(CONFIG_PRODUCT_JD2019) || defined(CONFIG_PRODUCT_ZAP)
+#define DCP_CURRENT_UA			3000000
+#else
 #define DCP_CURRENT_UA			1500000
+#endif
 #define HVDCP_CURRENT_UA		3000000
 #define TYPEC_DEFAULT_CURRENT_UA	900000
 #define TYPEC_MEDIUM_CURRENT_UA		1500000
@@ -2808,6 +2834,9 @@ static int get_rp_based_dcp_current(struct smb_charger *chg, int typec_mode)
 		rp_ua = DCP_CURRENT_UA;
 	}
 
+#if defined(CONFIG_PRODUCT_JD2019)
+	printk("[%s]line=%d typec_mode=%d, rp_ua=%d\n", __FUNCTION__, __LINE__, typec_mode, rp_ua);
+#endif
 	return rp_ua;
 }
 
@@ -2841,8 +2870,13 @@ static int smblib_handle_usb_current(struct smb_charger *chg,
 			 */
 			typec_mode = smblib_get_prop_typec_mode(chg);
 			rp_ua = get_rp_based_dcp_current(chg, typec_mode);
+#if defined(CONFIG_PRODUCT_ZAP)
+			rc = vote(chg->usb_icl_votable, LEGACY_UNKNOWN_VOTER,
+								true, 500000);
+#else
 			rc = vote(chg->usb_icl_votable, LEGACY_UNKNOWN_VOTER,
 								true, rp_ua);
+#endif
 			if (rc < 0)
 				return rc;
 		} else {
@@ -3392,9 +3426,135 @@ int smblib_get_charge_current(struct smb_charger *chg,
 	return 0;
 }
 
+#if defined(CONFIG_PRODUCT_JD2019)
+#if defined(CUSTOM_IDENTIFY_FLOAT_CHARGER)
+int lenovo_get_prop_usb_present(struct smb_charger *chg)
+{
+	union power_supply_propval present_val = {0, };
+	int rc;
+
+	rc = smblib_get_prop_usb_present(chg, &present_val);
+
+	return present_val.intval;
+}
+
+void lenovo_typec_removal_function(struct smb_charger *chg)
+{
+	cancel_delayed_work(&chg->lenovo_chg_flow_work);
+	//cancel_delayed_work(&chg->lenovo_min_monitor_work);
+	cancel_delayed_work(&chg->reset_max_fcc_current_work);
+}
+#endif
+#endif
+
 /************************
  * PARALLEL PSY GETTERS *
  ************************/
+
+#if defined(CONFIG_PRODUCT_JD2019)
+#if defined(CUSTOM_IDENTIFY_FLOAT_CHARGER)
+void lenovo_chg_flow_work(struct work_struct *work)
+{
+	int rc = 0;
+	const struct apsd_result *apsd_result = NULL;
+
+	printk("enter lenovo_chg_flow_work\n");
+
+	smblib_update_usb_type(smbchg_dev);
+	power_supply_changed(smbchg_dev->usb_psy);
+
+	//Check the VBUS status againg before runing the work
+	if (!lenovo_get_prop_usb_present(smbchg_dev)) {
+		printk("Try to run %s, but VBUS_IN is low\n", __func__);
+		lenovo_typec_removal_function(smbchg_dev);
+		return;
+	}
+
+	apsd_result = smblib_update_usb_type(smbchg_dev);
+	printk("enter lenovo_chg_flow_work  apsd_result->pst=%d\n", apsd_result->pst);
+
+	if (apsd_result->pst == POWER_SUPPLY_TYPE_USB) {
+		power_supply_changed(smbchg_dev->usb_psy);
+	}
+
+	if (smbchg_dev->pd_active) {
+		printk("%s: PD_active\n", __func__);
+		//smblib_lenovo_monitor_start(smbchg_dev, 0);		//BSP: Jeita start
+		return;
+	}
+
+	printk("enter lenovo_chg_flow_work  apsd_result->bit=%d\n", apsd_result->bit);
+
+	switch (apsd_result->bit) {
+	case SDP_CHARGER_BIT:
+	case FLOAT_CHARGER_BIT:
+		printk("lenovo_chg_flow_work enter FLOAT_CHARGER_BIT\n");
+		rc= vote(smbchg_dev->usb_icl_votable, CUSTOM_ICL_VOTER, true, VOTECHG_ICL_VALUE_500MA);
+		if (rc < 0)
+		{
+			printk("[%s]line=%d: vote ICL fail\n", __FUNCTION__, __LINE__);
+		}
+
+		//smblib_lenovo_monitor_start(smbchg_dev, 0);		//BSP: Jeita start
+		break;
+
+	case CDP_CHARGER_BIT:
+		printk("lenovo_chg_flow_work enter CDP_CHARGER_BIT\n");
+		rc= vote(smbchg_dev->usb_icl_votable, CUSTOM_ICL_VOTER, true, VOTECHG_ICL_VALUE_500MA);
+		if (rc < 0)
+		{
+			printk("[%s]line=%d: vote ICL fail\n", __FUNCTION__, __LINE__);
+		}
+
+		//smblib_lenovo_monitor_start(smbchg_dev, 0);		//BSP: Jeita start
+		break;
+
+	case OCP_CHARGER_BIT:
+		printk("lenovo_chg_flow_work entert OCP_CHARGER_BIT");
+		rc= vote(smbchg_dev->usb_icl_votable, CUSTOM_ICL_VOTER, true, VOTECHG_ICL_VALUE_1000MA);
+		if (rc < 0)
+		{
+			printk("[%s]line=%d: vote ICL fail\n", __FUNCTION__, __LINE__);
+		}
+
+		//smblib_lenovo_monitor_start(smbchg_dev, 0);		//BSP: Jeita start
+		break;
+
+	case DCP_CHARGER_BIT | QC_3P0_BIT:
+	case DCP_CHARGER_BIT | QC_2P0_BIT:
+	case DCP_CHARGER_BIT:
+		printk("lenovo_chg_flow_work entert DCP_CHARGER_BIT");
+		rc= vote(smbchg_dev->usb_icl_votable, CUSTOM_ICL_VOTER, true, VOTECHG_ICL_VALUE_3000MA);
+		if (rc < 0)
+		{
+			printk("[%s]line=%d: vote ICL fail\n", __FUNCTION__, __LINE__);
+		}
+
+		//smblib_lenovo_monitor_start(smbchg_dev, 0);		//BSP: Jeita start
+		break;
+
+	default:
+		break;
+	}
+}
+#endif
+
+void reset_max_fcc_current_work(struct work_struct *work)
+{
+	int rc = 0;
+	if (g_play_enable)
+		rc= vote(smbchg_dev->fcc_votable, FCC_GAME_VOTER, true, VOTECHG_FCC_VALUE_700MA);
+	else
+		rc= vote(smbchg_dev->fcc_votable, FCC_GAME_VOTER, false, 0);
+
+	 if (rc < 0)
+	{
+		pr_err("reset_max_fcc_current_work, vote fcc fail\n");
+	}
+	schedule_delayed_work(&smbchg_dev->reset_max_fcc_current_work, msecs_to_jiffies(PLAY_GMAE_RESET_CURRENT_DELAY_MS));
+}
+#endif
+
 #ifdef SUPPORT_USER_CHARGE_OP
 #define USER_HEALTH_INIT_DELAY_MS	1000	/* 1 sec */
 #define USER_HEALTH_RESTART_DELAY_MS	1000	/* 1 sec */
@@ -3688,6 +3848,15 @@ void smblib_usb_plugin_hard_reset_locked(struct smb_charger *chg)
 	else
 		chg->smb_charger_online = 0;
 #endif
+
+#if defined(CONFIG_PRODUCT_ZAP)
+#ifdef SUPPORT_VENDOR_USB_PLUGIN_AWAKE
+	if (vbus_rising)
+		vote(chg->awake_votable, PLUGIN_LOCK_VOTER, true, 0);
+	else
+		vote(chg->awake_votable, PLUGIN_LOCK_VOTER, false, 0);
+#endif
+#endif
 }
 
 #define PL_DELAY_MS			30000
@@ -3772,6 +3941,15 @@ void smblib_usb_plugin_locked(struct smb_charger *chg)
 	else
 		chg->smb_charger_online = 0;
 #endif
+
+#if defined(CONFIG_PRODUCT_ZAP)
+#ifdef SUPPORT_VENDOR_USB_PLUGIN_AWAKE
+	if (vbus_rising)
+		vote(chg->awake_votable, PLUGIN_LOCK_VOTER, true, 0);
+	else
+		vote(chg->awake_votable, PLUGIN_LOCK_VOTER, false, 0);
+#endif
+#endif
 }
 
 irqreturn_t smblib_handle_usb_plugin(int irq, void *data)
@@ -3779,6 +3957,9 @@ irqreturn_t smblib_handle_usb_plugin(int irq, void *data)
 	struct smb_irq_data *irq_data = data;
 	struct smb_charger *chg = irq_data->parent_data;
 
+#if defined(CONFIG_PRODUCT_ZAP)
+	smblib_dbg(chg, PR_INTERRUPT, "IRQ: %s\n", __func__);
+#endif
 	mutex_lock(&chg->lock);
 	if (chg->pd_hard_reset)
 		smblib_usb_plugin_hard_reset_locked(chg);
@@ -4065,6 +4246,8 @@ static void smblib_force_legacy_icl(struct smb_charger *chg, int pst)
 		pr_err("hzn::HVDCP---\n");
 #endif
 #if defined(CONFIG_PRODUCT_KUNLUN2)
+		vote(chg->usb_icl_votable, LEGACY_UNKNOWN_VOTER, true, 3000000);
+#else
 		vote(chg->usb_icl_votable, LEGACY_UNKNOWN_VOTER, true, 3000000);
 #endif
 		break;
@@ -5489,6 +5672,12 @@ int smblib_init(struct smb_charger *chg)
 	INIT_WORK(&chg->rdstd_cc2_detach_work, rdstd_cc2_detach_work);
 	INIT_DELAYED_WORK(&chg->hvdcp_detect_work, smblib_hvdcp_detect_work);
 	INIT_DELAYED_WORK(&chg->clear_hdc_work, clear_hdc_work);
+#if defined(CONFIG_PRODUCT_JD2019)
+#if defined(CUSTOM_IDENTIFY_FLOAT_CHARGER)
+	INIT_DELAYED_WORK(&chg->lenovo_chg_flow_work, lenovo_chg_flow_work);
+#endif
+	INIT_DELAYED_WORK(&chg->reset_max_fcc_current_work, reset_max_fcc_current_work);
+#endif
 #ifdef SUPPORT_USER_CHARGE_OP
 	INIT_DELAYED_WORK(&chg->user_health_charge_work, smblib_user_health_charge_work);
 #endif

@@ -29,6 +29,14 @@ enum print_reason {
 };
 
 #define SUPPORT_USER_CHARGE_OP
+
+#if defined(CONFIG_PRODUCT_ZAP)
+#define SUPPORT_VENDOR_USB_PLUGIN_AWAKE
+#endif
+
+#if defined(CONFIG_PRODUCT_JD2019)
+#define CUSTOM_IDENTIFY_FLOAT_CHARGER
+#endif
 #define DEFAULT_VOTER			"DEFAULT_VOTER"
 #define USER_VOTER			"USER_VOTER"
 #define PD_VOTER			"PD_VOTER"
@@ -75,6 +83,19 @@ enum print_reason {
 #define FG_ESR_VOTER			"FG_ESR_VOTER"
 #define FCC_STEPPER_VOTER		"FCC_STEPPER_VOTER"
 #define PD_NOT_SUPPORTED_VOTER		"PD_NOT_SUPPORTED_VOTER"
+
+#if defined(CONFIG_PRODUCT_JD2019)
+#if defined(CUSTOM_IDENTIFY_FLOAT_CHARGER)
+#define CUSTOM_ICL_VOTER		"CUSTOM_ICL_VOTER"
+#endif
+#define FCC_GAME_VOTER			"FCC_GAME_VOTER"
+#endif
+
+#if defined(CONFIG_PRODUCT_ZAP)
+#ifdef SUPPORT_VENDOR_USB_PLUGIN_AWAKE
+#define PLUGIN_LOCK_VOTER		"PLUGIN_LOCK_VOTER"
+#endif
+#endif
 
 #ifdef SUPPORT_USER_CHARGE_OP
 #define FCC_USER_CHARGE_OP_VOTER	"FCC_USER_CHARGE_OP_VOTER"
@@ -326,6 +347,12 @@ struct smb_charger {
 #ifdef SUPPORT_USER_CHARGE_OP
 	struct delayed_work	user_health_charge_work;
 #endif
+#if defined(CONFIG_PRODUCT_JD2019)
+#if defined(CUSTOM_IDENTIFY_FLOAT_CHARGER)
+	struct delayed_work	lenovo_chg_flow_work;
+#endif
+	struct delayed_work     reset_max_fcc_current_work;
+#endif
 	/* cached status */
 	int			voltage_min_uv;
 	int			voltage_max_uv;
@@ -338,6 +365,9 @@ struct smb_charger {
 	int			dcp_icl_ua;
 	int			fake_capacity;
 	int			fake_batt_status;
+#if defined(CONFIG_PRODUCT_JD2019)
+	bool			start_game_enabled;
+#endif
 #ifdef SUPPORT_USER_CHARGE_OP
 	int			user_charge_op_enable;
 	int			user_charge_soc;

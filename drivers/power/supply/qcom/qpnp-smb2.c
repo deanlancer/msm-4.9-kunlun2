@@ -30,6 +30,14 @@
 #include <linux/pmic-voter.h>
 
 #define SMB2_DEFAULT_WPWR_UW	8000000
+#if defined(CONFIG_PRODUCT_JD2019)
+#define USB_CHARGE_FAIL_WHEN_SHUTDUWN
+int g_play_enable = 0;
+#endif
+#if defined(CONFIG_PRODUCT_ZAP)
+#define USB_CHARGE_FAIL_WHEN_SHUTDUWN
+#endif
+
 #define SUPPORT_BATTERY_AGE
 #define SUPPORT_USER_CHARGE_OP
 #ifdef SUPPORT_USER_CHARGE_OP
@@ -203,8 +211,16 @@ struct smb2 {
 static bool compass_opened = false;
 #endif
 
-#if defined(CONFIG_PRODUCT_KUNLUN2)
+#if defined(CONFIG_PRODUCT_JD2019)
+static int __debug_mask = 0xC;
+
+#if defined(CUSTOM_IDENTIFY_FLOAT_CHARGER)
+struct smb_charger *smbchg_dev = NULL;
+#endif
+#elif defined(CONFIG_PRODUCT_KUNLUN2)
 static int __debug_mask = 0x11;
+#elif defined(CONFIG_PRODUCT_ZAP)
+static int __debug_mask = 0x1D;
 #else
 static int __debug_mask;
 #endif
@@ -248,6 +264,10 @@ static int smb2_parse_dt(struct smb2 *chip)
 
 	chg->reddragon_ipc_wa = of_property_read_bool(node,
 				"qcom,qcs605-ipc-wa");
+#if defined(CONFIG_PRODUCT_JD2019)
+	chg->start_game_enabled = of_property_read_bool(node,
+                                "qcom,start-game-enable");
+#endif
 
 	chg->step_chg_enabled = of_property_read_bool(node,
 				"qcom,step-charging-enable");
@@ -1038,6 +1058,9 @@ static enum power_supply_property smb2_batt_props[] = {
 #endif
 	POWER_SUPPLY_PROP_TEMP,
 	POWER_SUPPLY_PROP_TECHNOLOGY,
+#if defined(CONFIG_PRODUCT_JD2019)
+	POWER_SUPPLY_PROP_START_GAME_ENABLED,
+#endif
 #ifdef SUPPORT_BATTERY_AGE
 	POWER_SUPPLY_PROP_AGE,
 #endif
@@ -1114,7 +1137,7 @@ static int smb2_batt_get_prop(struct power_supply *psy,
 		rc = -ENODATA;
 		if (pval.intval)
 			rc = smblib_get_prop_charger_temp(chg, val);
-#if defined(CONFIG_PRODUCT_KUNLUN2)
+#if defined(CONFIG_PRODUCT_JD2019) || defined(CONFIG_PRODUCT_KUNLUN2) || defined(CONFIG_PRODUCT_ZAP)
 		else {
 			rc = 0;
 			val->intval = 0;
@@ -1127,6 +1150,11 @@ static int smb2_batt_get_prop(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_INPUT_CURRENT_LIMITED:
 		rc = smblib_get_prop_input_current_limited(chg, val);
 		break;
+#if defined(CONFIG_PRODUCT_JD2019)
+	case POWER_SUPPLY_PROP_START_GAME_ENABLED:
+		val->intval = chg->start_game_enabled;
+                break;
+#endif
 #if defined(CONFIG_PRODUCT_KUNLUN2)
 	case POWER_SUPPLY_PROP_COMPASS_OPENED:
 		val->intval = compass_opened;
@@ -1287,6 +1315,12 @@ static int smb2_batt_set_prop(struct power_supply *psy,
 			vote(chg->fcc_votable, BATT_PROFILE_VOTER, false, 0);
 		}
 		break;
+#if defined(CONFIG_PRODUCT_JD2019)
+	case POWER_SUPPLY_PROP_START_GAME_ENABLED:
+                chg->start_game_enabled = !!val->intval;
+		g_play_enable = chg->start_game_enabled;
+	        break;
+#endif
 #ifdef SUPPORT_USER_CHARGE_OP
 #define USER_CHARGE_OP_FCC_UA	2000000
 	case POWER_SUPPLY_PROP_USER_CHARGE_OP:
@@ -1383,6 +1417,9 @@ static int smb2_batt_prop_is_writeable(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_DP_DM:
 	case POWER_SUPPLY_PROP_RERUN_AICL:
 	case POWER_SUPPLY_PROP_INPUT_CURRENT_LIMITED:
+#if defined(CONFIG_PRODUCT_JD2019)
+	case POWER_SUPPLY_PROP_START_GAME_ENABLED:
+#endif
 #ifdef SUPPORT_USER_CHARGE_OP
 	case POWER_SUPPLY_PROP_USER_CHARGE_OP:
 	case POWER_SUPPLY_PROP_USER_CHARGE_SOC:
@@ -2541,6 +2578,11 @@ static int smb2_probe(struct platform_device *pdev)
 	chg->die_health = -EINVAL;
 	chg->name = "PMI";
 	chg->audio_headset_drp_wait_ms = &__audio_headset_drp_wait_ms;
+#if defined(CONFIG_PRODUCT_JD2019)
+#if defined(CUSTOM_IDENTIFY_FLOAT_CHARGER)
+	smbchg_dev = chg;
+#endif
+#endif
 #ifdef SUPPORT_USER_CHARGE_OP
 	chg->user_charge_op_enable = 0;
 	chg->user_charge_soc = 100;

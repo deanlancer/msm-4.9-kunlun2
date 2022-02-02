@@ -253,6 +253,9 @@ static struct device_attribute power_supply_attrs[] = {
 	POWER_SUPPLY_ATTR(usb_otg),
 	POWER_SUPPLY_ATTR(battery_charging_enabled),
 	POWER_SUPPLY_ATTR(charging_enabled),
+#if defined(CONFIG_PRODUCT_JD2019)
+	POWER_SUPPLY_ATTR(start_game_enabled),
+#endif
 #ifdef SUPPORT_BATTERY_AGE
 	POWER_SUPPLY_ATTR(age),
 #endif

@@ -776,7 +776,11 @@ int qcom_step_chg_init(struct device *dev,
 
 	chip->step_chg_config->psy_prop = POWER_SUPPLY_PROP_VOLTAGE_NOW;
 	chip->step_chg_config->prop_name = "VBATT";
+#if defined(CONFIG_PRODUCT_ZAP)
+	chip->step_chg_config->hysteresis = 0;
+#else
 	chip->step_chg_config->hysteresis = 100000;
+#endif
 
 	chip->jeita_fcc_config = devm_kzalloc(dev,
 			sizeof(struct jeita_fcc_cfg), GFP_KERNEL);
@@ -787,10 +791,18 @@ int qcom_step_chg_init(struct device *dev,
 
 	chip->jeita_fcc_config->psy_prop = POWER_SUPPLY_PROP_TEMP;
 	chip->jeita_fcc_config->prop_name = "BATT_TEMP";
+#if defined(CONFIG_PRODUCT_ZAP)
+	chip->jeita_fcc_config->hysteresis = 0;
+#else
 	chip->jeita_fcc_config->hysteresis = 10;
+#endif
 	chip->jeita_fv_config->psy_prop = POWER_SUPPLY_PROP_TEMP;
 	chip->jeita_fv_config->prop_name = "BATT_TEMP";
+#if defined(CONFIG_PRODUCT_ZAP)
+	chip->jeita_fv_config->hysteresis = 0;
+#else
 	chip->jeita_fv_config->hysteresis = 10;
+#endif
 
 	INIT_DELAYED_WORK(&chip->status_change_work, status_change_work);
 	INIT_DELAYED_WORK(&chip->get_config_work, get_config_work);
