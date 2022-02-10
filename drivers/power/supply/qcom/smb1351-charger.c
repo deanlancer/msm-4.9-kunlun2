@@ -2199,7 +2199,7 @@ static int smb1351_apsd_complete_handler(struct smb1351_charger *chip,
 		} else if (type == POWER_SUPPLY_TYPE_USB_DCP) {
 			pr_debug("schedule hvdcp detection worker\n");
 			pm_stay_awake(chip->dev);
-			schedule_delayed_work(&chip->hvdcp_det_work,
+			queue_delayed_work(system_power_efficient_wq, &chip->hvdcp_det_work,
 					msecs_to_jiffies(HVDCP_NOTIFY_MS));
 		}
 
@@ -2271,7 +2271,7 @@ end:
 
 reschedule:
 	pr_debug("reschedule after 1s\n");
-	schedule_delayed_work(&chip->chg_remove_work,
+	queue_delayed_work(system_power_efficient_wq, &chip->chg_remove_work,
 				msecs_to_jiffies(SECOND_CHECK_DELAY));
 }
 
@@ -2283,7 +2283,7 @@ static int smb1351_usbin_uv_handler(struct smb1351_charger *chip, u8 status)
 		cancel_delayed_work_sync(&chip->hvdcp_det_work);
 		pm_relax(chip->dev);
 		pr_debug("schedule charger remove worker\n");
-		schedule_delayed_work(&chip->chg_remove_work,
+		queue_delayed_work(system_power_efficient_wq, &chip->chg_remove_work,
 					msecs_to_jiffies(FIRST_CHECK_DELAY));
 		pm_stay_awake(chip->dev);
 	}
@@ -3132,8 +3132,8 @@ static int smb1351_main_charger_probe(struct i2c_client *client,
 		return rc;
 	}
 
-	INIT_DELAYED_WORK(&chip->chg_remove_work, smb1351_chg_remove_work);
-	INIT_DELAYED_WORK(&chip->hvdcp_det_work, smb1351_hvdcp_det_work);
+	INIT_DEFERRABLE_WORK(&chip->chg_remove_work, smb1351_chg_remove_work);
+	INIT_DEFERRABLE_WORK(&chip->hvdcp_det_work, smb1351_hvdcp_det_work);
 	device_init_wakeup(chip->dev, true);
 	/* probe the device to check if its actually connected */
 	rc = smb1351_read_reg(chip, CHG_REVISION_REG, &reg);

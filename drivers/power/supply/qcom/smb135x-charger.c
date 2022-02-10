@@ -2569,7 +2569,7 @@ static int otg_oc_handler(struct smb135x_chg *chip, u8 rt_stat)
 	}
 
 	pr_debug("rt_stat = 0x%02x\n", rt_stat);
-	schedule_delayed_work(&chip->reset_otg_oc_count_work,
+	queue_delayed_work(system_power_efficient_wq, &chip->reset_otg_oc_count_work,
 			msecs_to_jiffies(RESET_OTG_OC_COUNT_MS));
 	mutex_unlock(&chip->otg_oc_count_lock);
 	return 0;
@@ -2597,7 +2597,7 @@ static int handle_dc_insertion(struct smb135x_chg *chip)
 	union power_supply_propval prop;
 
 	if (chip->dc_psy_type == POWER_SUPPLY_TYPE_WIRELESS)
-		schedule_delayed_work(&chip->wireless_insertion_work,
+		queue_delayed_work(system_power_efficient_wq, &chip->wireless_insertion_work,
 			msecs_to_jiffies(DCIN_UNSUSPEND_DELAY_MS));
 	if (chip->dc_psy_type != -EINVAL) {
 		prop.intval = chip->dc_present;
@@ -2795,7 +2795,7 @@ static int handle_usb_insertion(struct smb135x_chg *chip)
 	if (usb_supply_type == POWER_SUPPLY_TYPE_USB_DCP) {
 		pr_debug("schedule hvdcp detection worker\n");
 		pm_stay_awake(chip->dev);
-		schedule_delayed_work(&chip->hvdcp_det_work,
+		queue_delayed_work(system_power_efficient_wq, &chip->hvdcp_det_work,
 					msecs_to_jiffies(HVDCP_NOTIFY_MS));
 	}
 
@@ -4188,12 +4188,12 @@ static int smb135x_main_charger_probe(struct i2c_client *client,
 
 	chip->fake_battery_soc = -EINVAL;
 
-	INIT_DELAYED_WORK(&chip->wireless_insertion_work,
+	INIT_DEFERRABLE_WORK(&chip->wireless_insertion_work,
 					wireless_insertion_work);
 
-	INIT_DELAYED_WORK(&chip->reset_otg_oc_count_work,
+	INIT_DEFERRABLE_WORK(&chip->reset_otg_oc_count_work,
 					reset_otg_oc_count_work);
-	INIT_DELAYED_WORK(&chip->hvdcp_det_work, smb135x_hvdcp_det_work);
+	INIT_DEFERRABLE_WORK(&chip->hvdcp_det_work, smb135x_hvdcp_det_work);
 	mutex_init(&chip->path_suspend_lock);
 	mutex_init(&chip->current_change_lock);
 	mutex_init(&chip->read_write_lock);

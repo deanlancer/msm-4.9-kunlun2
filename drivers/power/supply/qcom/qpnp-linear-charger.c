@@ -1806,7 +1806,7 @@ static void qpnp_lbc_parallel_work(struct work_struct *work)
 		pr_debug("ichg_now increased to %d\n", chip->ichg_now);
 	}
 
-	schedule_delayed_work(&chip->parallel_work, VINMIN_DELAY);
+	queue_delayed_work(system_power_efficient_wq, &chip->parallel_work, VINMIN_DELAY);
 
 	return;
 
@@ -1825,7 +1825,7 @@ static int qpnp_lbc_parallel_charging_config(struct qpnp_lbc_chip *chip,
 		qpnp_lbc_ibatmax_set(chip, chip->ichg_now);
 		qpnp_lbc_charger_enable(chip, PARALLEL, 1);
 		pm_stay_awake(chip->dev);
-		schedule_delayed_work(&chip->parallel_work, VINMIN_DELAY);
+		queue_delayed_work(system_power_efficient_wq, &chip->parallel_work, VINMIN_DELAY);
 	} else {
 		cancel_delayed_work_sync(&chip->parallel_work);
 		pm_relax(chip->dev);
@@ -2602,7 +2602,7 @@ static irqreturn_t qpnp_lbc_chg_gone_irq_handler(int irq, void *_chip)
 			 * charger is being used, or charger has been
 			 * removed.
 			 */
-			schedule_delayed_work(&chip->collapsible_detection_work,
+			queue_delayed_work(system_power_efficient_wq, &chip->collapsible_detection_work,
 				msecs_to_jiffies(CHG_REMOVAL_DETECT_DLY_MS));
 		}
 	}
@@ -3279,7 +3279,7 @@ static int qpnp_lbc_parallel_probe(struct platform_device *pdev)
 	device_init_wakeup(&pdev->dev, 1);
 	spin_lock_init(&chip->hw_access_lock);
 	spin_lock_init(&chip->ibat_change_lock);
-	INIT_DELAYED_WORK(&chip->parallel_work, qpnp_lbc_parallel_work);
+	INIT_DEFERRABLE_WORK(&chip->parallel_work, qpnp_lbc_parallel_work);
 
 	OF_PROP_READ(chip, cfg_max_voltage_mv, "vddmax-mv", rc, 0);
 	if (rc)
@@ -3372,7 +3372,7 @@ static int qpnp_lbc_main_probe(struct platform_device *pdev)
 	spin_lock_init(&chip->irq_lock);
 	INIT_WORK(&chip->vddtrim_work, qpnp_lbc_vddtrim_work_fn);
 	alarm_init(&chip->vddtrim_alarm, ALARM_REALTIME, vddtrim_callback);
-	INIT_DELAYED_WORK(&chip->collapsible_detection_work,
+	INIT_DEFERRABLE_WORK(&chip->collapsible_detection_work,
 			qpnp_lbc_collapsible_detection_work);
 	INIT_WORK(&chip->debug_board_work, qpnp_lbc_debug_board_work_fn);
 	/* Get all device-tree properties */

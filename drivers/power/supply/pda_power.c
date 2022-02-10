@@ -162,7 +162,7 @@ static void psy_changed(void)
 	 * charge power should stabilize.
 	 */
 	cancel_delayed_work(&supply_work);
-	schedule_delayed_work(&supply_work,
+	queue_delayed_work(system_power_efficient_wq, &supply_work,
 			      msecs_to_jiffies(pdata->wait_for_charger));
 }
 
@@ -186,7 +186,7 @@ static irqreturn_t power_changed_isr(int irq, void *power_supply)
 	 * because ac/usb status readings may lag from irq.
 	 */
 	cancel_delayed_work(&charger_work);
-	schedule_delayed_work(&charger_work,
+	queue_delayed_work(system_power_efficient_wq, &charger_work,
 			      msecs_to_jiffies(pdata->wait_for_status));
 
 	return IRQ_HANDLED;
@@ -214,7 +214,7 @@ static void polling_work_func(struct work_struct *work)
 		psy_changed();
 
 	cancel_delayed_work(&polling_work);
-	schedule_delayed_work(&polling_work,
+	queue_delayed_work(system_power_efficient_wq, &polling_work,
 			      msecs_to_jiffies(pdata->polling_interval));
 }
 
@@ -254,7 +254,7 @@ static int otg_handle_notification(struct notifier_block *nb,
 	 * because ac/usb status readings may lag from irq.
 	 */
 	cancel_delayed_work(&charger_work);
-	schedule_delayed_work(&charger_work,
+	queue_delayed_work(system_power_efficient_wq, &charger_work,
 			      msecs_to_jiffies(pdata->wait_for_status));
 
 	return NOTIFY_OK;
@@ -304,8 +304,8 @@ static int pda_power_probe(struct platform_device *pdev)
 	if (!pdata->ac_max_uA)
 		pdata->ac_max_uA = 500000;
 
-	INIT_DELAYED_WORK(&charger_work, charger_work_func);
-	INIT_DELAYED_WORK(&supply_work, supply_work_func);
+	INIT_DEFERRABLE_WORK(&charger_work, charger_work_func);
+	INIT_DEFERRABLE_WORK(&supply_work, supply_work_func);
 
 	ac_irq = platform_get_resource_byname(pdev, IORESOURCE_IRQ, "ac");
 	usb_irq = platform_get_resource_byname(pdev, IORESOURCE_IRQ, "usb");
@@ -389,9 +389,9 @@ static int pda_power_probe(struct platform_device *pdev)
 
 	if (polling) {
 		dev_dbg(dev, "will poll for status\n");
-		INIT_DELAYED_WORK(&polling_work, polling_work_func);
+		INIT_DEFERRABLE_WORK(&polling_work, polling_work_func);
 		cancel_delayed_work(&polling_work);
-		schedule_delayed_work(&polling_work,
+		queue_delayed_work(system_power_efficient_wq, &polling_work,
 				      msecs_to_jiffies(pdata->polling_interval));
 	}
 

@@ -3551,7 +3551,7 @@ void reset_max_fcc_current_work(struct work_struct *work)
 	{
 		pr_err("reset_max_fcc_current_work, vote fcc fail\n");
 	}
-	schedule_delayed_work(&smbchg_dev->reset_max_fcc_current_work, msecs_to_jiffies(PLAY_GMAE_RESET_CURRENT_DELAY_MS));
+	queue_delayed_work(system_power_efficient_wq, &smbchg_dev->reset_max_fcc_current_work, msecs_to_jiffies(PLAY_GMAE_RESET_CURRENT_DELAY_MS));
 }
 #endif
 
@@ -3562,7 +3562,7 @@ void reset_max_fcc_current_work(struct work_struct *work)
 void smblib_start_user_health_work(struct smb_charger *chg)
 {
 	pr_info("user_batt_health start work\n");
-	schedule_delayed_work(&chg->user_health_charge_work,
+	queue_delayed_work(system_power_efficient_wq, &chg->user_health_charge_work,
 					msecs_to_jiffies(USER_HEALTH_INIT_DELAY_MS));
 }
 
@@ -3570,7 +3570,7 @@ void smblib_restart_user_health_work(struct smb_charger *chg)
 {
 	pr_info("user_batt_health restart work\n");
 	cancel_delayed_work_sync(&chg->user_health_charge_work);
-	schedule_delayed_work(&chg->user_health_charge_work,
+	queue_delayed_work(system_power_efficient_wq, &chg->user_health_charge_work,
 					msecs_to_jiffies(USER_HEALTH_RESTART_DELAY_MS));
 }
 
@@ -3609,7 +3609,7 @@ static void smblib_user_health_charge_work(struct work_struct *work)
 	}
 	pr_info("user_batt_health %d, %d, %d", chg->user_charge_op_enable, chg->user_charge_soc, pval.intval);
 
-	schedule_delayed_work(&chg->user_health_charge_work,
+	queue_delayed_work(system_power_efficient_wq, &chg->user_health_charge_work,
 					msecs_to_jiffies(USER_HEALTH_CHECK_DELAY_MS));
 }
 #endif
@@ -3894,7 +3894,7 @@ void smblib_usb_plugin_locked(struct smb_charger *chg)
 
 		/* Schedule work to enable parallel charger */
 		vote(chg->awake_votable, PL_DELAY_VOTER, true, 0);
-		schedule_delayed_work(&chg->pl_enable_work,
+		queue_delayed_work(system_power_efficient_wq, &chg->pl_enable_work,
 					msecs_to_jiffies(PL_DELAY_MS));
 		/* vbus rising when APSD was disabled and PD_ACTIVE = 0 */
 		if (get_effective_result(chg->apsd_disable_votable) &&
@@ -3999,7 +3999,7 @@ irqreturn_t smblib_handle_icl_change(int irq, void *data)
 			delay = 0;
 
 		cancel_delayed_work_sync(&chg->icl_change_work);
-		schedule_delayed_work(&chg->icl_change_work,
+		queue_delayed_work(system_power_efficient_wq, &chg->icl_change_work,
 						msecs_to_jiffies(delay));
 	}
 
@@ -4320,7 +4320,7 @@ static void smblib_handle_apsd_done(struct smb_charger *chg, bool rising)
 		break;
 	case DCP_CHARGER_BIT:
 		if (chg->wa_flags & QC_CHARGER_DETECTION_WA_BIT)
-			schedule_delayed_work(&chg->hvdcp_detect_work,
+			queue_delayed_work(system_power_efficient_wq, &chg->hvdcp_detect_work,
 					      msecs_to_jiffies(HVDCP_DET_MS));
 		break;
 	default:
@@ -4886,7 +4886,7 @@ irqreturn_t smblib_handle_usb_typec_change(int irq, void *data)
 		cancel_delayed_work_sync(&chg->uusb_otg_work);
 		vote(chg->awake_votable, OTG_DELAY_VOTER, true, 0);
 		smblib_dbg(chg, PR_INTERRUPT, "Scheduling OTG work\n");
-		schedule_delayed_work(&chg->uusb_otg_work,
+		queue_delayed_work(system_power_efficient_wq, &chg->uusb_otg_work,
 				msecs_to_jiffies(chg->otg_delay_ms));
 		return IRQ_HANDLED;
 	}
@@ -4934,7 +4934,7 @@ irqreturn_t smblib_handle_high_duty_cycle(int irq, void *data)
 	if (chg->irq_info[HIGH_DUTY_CYCLE_IRQ].irq)
 		disable_irq_nosync(chg->irq_info[HIGH_DUTY_CYCLE_IRQ].irq);
 
-	schedule_delayed_work(&chg->clear_hdc_work, msecs_to_jiffies(60));
+	queue_delayed_work(system_power_efficient_wq, &chg->clear_hdc_work, msecs_to_jiffies(60));
 
 	return IRQ_HANDLED;
 }
@@ -5000,7 +5000,7 @@ irqreturn_t smblib_handle_switcher_power_ok(int irq, void *data)
 			 * permanently suspending the input if the boost-back
 			 * condition is unintentionally hit.
 			 */
-			schedule_delayed_work(&chg->bb_removal_work,
+			queue_delayed_work(system_power_efficient_wq, &chg->bb_removal_work,
 				msecs_to_jiffies(BOOST_BACK_UNVOTE_DELAY_MS));
 		}
 	}
@@ -5253,7 +5253,7 @@ static void smblib_otg_oc_work(struct work_struct *work)
 	 * triggered then it is likely that the software based soft start was
 	 * successful and the VBUS < 1V restriction should be re-enabled.
 	 */
-	schedule_delayed_work(&chg->otg_ss_done_work, msecs_to_jiffies(500));
+	queue_delayed_work(system_power_efficient_wq, &chg->otg_ss_done_work, msecs_to_jiffies(500));
 
 	rc = _smblib_vbus_regulator_disable(chg->vbus_vreg->rdev);
 	if (rc < 0) {
@@ -5670,25 +5670,25 @@ int smblib_init(struct smb_charger *chg)
 	INIT_WORK(&chg->bms_update_work, bms_update_work);
 	INIT_WORK(&chg->pl_update_work, pl_update_work);
 	INIT_WORK(&chg->rdstd_cc2_detach_work, rdstd_cc2_detach_work);
-	INIT_DELAYED_WORK(&chg->hvdcp_detect_work, smblib_hvdcp_detect_work);
-	INIT_DELAYED_WORK(&chg->clear_hdc_work, clear_hdc_work);
+	INIT_DEFERRABLE_WORK(&chg->hvdcp_detect_work, smblib_hvdcp_detect_work);
+	INIT_DEFERRABLE_WORK(&chg->clear_hdc_work, clear_hdc_work);
 #if defined(CONFIG_PRODUCT_JD2019)
 #if defined(CUSTOM_IDENTIFY_FLOAT_CHARGER)
-	INIT_DELAYED_WORK(&chg->lenovo_chg_flow_work, lenovo_chg_flow_work);
+	INIT_DEFERRABLE_WORK(&chg->lenovo_chg_flow_work, lenovo_chg_flow_work);
 #endif
-	INIT_DELAYED_WORK(&chg->reset_max_fcc_current_work, reset_max_fcc_current_work);
+	INIT_DEFERRABLE_WORK(&chg->reset_max_fcc_current_work, reset_max_fcc_current_work);
 #endif
 #ifdef SUPPORT_USER_CHARGE_OP
-	INIT_DELAYED_WORK(&chg->user_health_charge_work, smblib_user_health_charge_work);
+	INIT_DEFERRABLE_WORK(&chg->user_health_charge_work, smblib_user_health_charge_work);
 #endif
 	INIT_WORK(&chg->otg_oc_work, smblib_otg_oc_work);
 	INIT_WORK(&chg->vconn_oc_work, smblib_vconn_oc_work);
-	INIT_DELAYED_WORK(&chg->otg_ss_done_work, smblib_otg_ss_done_work);
-	INIT_DELAYED_WORK(&chg->icl_change_work, smblib_icl_change_work);
-	INIT_DELAYED_WORK(&chg->pl_enable_work, smblib_pl_enable_work);
+	INIT_DEFERRABLE_WORK(&chg->otg_ss_done_work, smblib_otg_ss_done_work);
+	INIT_DEFERRABLE_WORK(&chg->icl_change_work, smblib_icl_change_work);
+	INIT_DEFERRABLE_WORK(&chg->pl_enable_work, smblib_pl_enable_work);
 	INIT_WORK(&chg->legacy_detection_work, smblib_legacy_detection_work);
-	INIT_DELAYED_WORK(&chg->uusb_otg_work, smblib_uusb_otg_work);
-	INIT_DELAYED_WORK(&chg->bb_removal_work, smblib_bb_removal_work);
+	INIT_DEFERRABLE_WORK(&chg->uusb_otg_work, smblib_uusb_otg_work);
+	INIT_DEFERRABLE_WORK(&chg->bb_removal_work, smblib_bb_removal_work);
 	chg->fake_capacity = -EINVAL;
 	chg->fake_input_current_limited = -EINVAL;
 	chg->fake_batt_status = -EINVAL;
