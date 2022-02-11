@@ -5694,7 +5694,10 @@ static void fg_cleanup(struct fg_chip *chip)
 	}
 
 	alarm_try_to_cancel(&chip->esr_filter_alarm);
+	#ifdef CONFIG_DEBUG_FS
 	debugfs_remove_recursive(chip->dfs_root);
+	#endif
+	
 	if (chip->awake_votable)
 		destroy_votable(chip->awake_votable);
 
@@ -5917,8 +5920,10 @@ static int fg_gen3_probe(struct platform_device *pdev)
 	/* Keep BATT_MISSING_IRQ disabled until we require it */
 	vote(chip->batt_miss_irq_en_votable, BATT_MISS_IRQ_VOTER, false, 0);
 
+	#ifdef CONFIG_DEBUG_fS
 	fg_debugfs_create(chip);
-
+	#endif
+	
 	rc = fg_get_battery_voltage(chip, &volt_uv);
 	if (!rc)
 		rc = fg_get_prop_capacity(chip, &msoc);
