@@ -14,6 +14,7 @@
 #define ANY_ID (~0)
 
 static const struct adreno_gpu_core adreno_gpulist[] = {
+	#if 0
 	{
 		.gpurev = ADRENO_REV_A630,
 		.core = 6,
@@ -35,6 +36,8 @@ static const struct adreno_gpu_core adreno_gpulist[] = {
 		.gpmu_tsens = 0x000C000D,
 		.max_power = 5448,
 	},
+	#endif
+	#if 0
 	{
 		.gpurev = ADRENO_REV_A615,
 		.core = 6,
@@ -54,6 +57,7 @@ static const struct adreno_gpu_core adreno_gpulist[] = {
 		.gpmu_major = 0x1,
 		.gpmu_minor = 0x003,
 	},
+	#endif
 	{
 		.gpurev = ADRENO_REV_A616,
 		.core = 6,
