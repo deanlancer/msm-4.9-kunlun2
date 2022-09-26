@@ -22,11 +22,11 @@
 	cmp		\rounds, #12
 	blo		2222f		/* 128 bits */
 	beq		1111f		/* 192 bits */
-	ld1		{v17.4s-v18.16b}, [\rk], #32
-1111:	ld1		{v19.4s-v20.16b}, [\rk], #32
-2222:	ld1		{v21.4s-v24.16b}, [\rk], #64
-	ld1		{v25.4s-v28.16b}, [\rk], #64
-	ld1		{v29.4s-v31.16b}, [\rk]
+	ld1		{v17.4s-v18.4s}, [\rk], #32
+1111:	ld1		{v19.4s-v20.4s}, [\rk], #32
+2222:	ld1		{v21.4s-v24.4s}, [\rk], #64
+	ld1		{v25.4s-v28.4s}, [\rk], #64
+	ld1		{v29.4s-v31.4s}, [\rk]
 	.endm
 
 	/* prepare for encryption with key in rk[] */
