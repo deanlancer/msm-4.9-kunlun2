@@ -64,6 +64,8 @@ bool ksu_allow_uid(uid_t uid, bool allow, bool persist)
 	p->uid = uid;
 	p->allow = allow;
 
+	pr_info("allow_uid: %d, allow: %d", uid, allow);
+
 	list_add_tail(&p->list, &allow_list);
 	result = true;
 
@@ -102,7 +104,7 @@ bool ksu_get_allow_list(int *array, int *length, bool allow)
 	int i = 0;
 	list_for_each (pos, &allow_list) {
 		p = list_entry(pos, struct perm_data, list);
-		pr_info("get_allow_list uid: %d allow: %d\n", p->uid, p->allow);
+		// pr_info("get_allow_list uid: %d allow: %d\n", p->uid, p->allow);
 		if (p->allow == allow) {
 			array[i++] = p->uid;
 		}
@@ -160,20 +162,6 @@ void do_load_allow_list(struct work_struct *work)
 	u32 magic;
 	u32 version;
 	KWORKER_INSTALL_KEYRING();
-	fp = filp_open("/data/adb", O_RDONLY, 0);
-	if (IS_ERR(fp)) {
-		int errno = PTR_ERR(fp);
-		pr_err("load_allow_list open '/data/adb': %d\n", PTR_ERR(fp));
-		if (errno == -ENOENT) {
-			msleep(2000);
-			ksu_queue_work(&ksu_load_work);
-			return;
-		} else {
-			pr_info("load_allow list dir exist now!");
-		}
-	} else {
-		filp_close(fp, 0);
-	}
 
 	// load allowlist now!
 	fp = filp_open(KERNEL_SU_ALLOWLIST, O_RDONLY, 0);
